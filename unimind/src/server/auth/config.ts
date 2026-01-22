@@ -34,7 +34,7 @@ export const authConfig = {
   providers: [
     // DiscordProvider,
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLLIENT_ID,
+      clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
     /**
