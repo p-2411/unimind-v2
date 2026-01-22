@@ -15,17 +15,223 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+// ============================================
+// USER
+// ============================================
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified DateTime?
+  password      String?
+  name          String?
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  courses          Course[]
+  assessments      Assessment[]
+  stats            UserStats?
+  topics           UserTopic[]
+  accounts         Account[]
+  sessions         Session[]
 
-    @@index([name])
+  @@map("users")
+  
 }
+
+model UserStats {
+    
+    id            String   @id @default(cuid())
+    userId        String   @unique
+    totalQuestionsAnswered Int @default(0)
+    totalCorrectAnswers    Int @default(0)
+    totalTimeSpent         Int @default(0) // in milliseconds
+
+  
+  // Gamification
+    level         Int      @default(1)
+    xp            Int      @default(0)
+    currentStreak Int      @default(0)
+    longestStreak Int      @default(0)
+    lastActiveDate DateTime?
+
+    user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    @@map("user_stats")
+}
+
+// model QuestionAttempt {
+//   id              String   @id @default(cuid())
+//   userId          String
+//   questionId      String
+//   isCorrect       Boolean
+//   timeSpent       Int?     // milliseconds
+//   answeredAt      DateTime @default(now())
+  
+//   // Active Recall Algorithm Fields
+// //   easeFactor      Float    @default(2.5)  // SM-2 algorithm
+// //   interval        Int      @default(0)    // Days until next review
+// //   repetitions     Int      @default(0)    // Number of successful reviews
+// //   nextReviewDate  DateTime?
+  
+//   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+//   @@index([userId, questionId])
+// //   @@index([userId, nextReviewDate])
+//   @@map("question_attempts")
+// }
+
+// model UserCourse {
+//   id         String   @id @default(cuid())
+//   userId     String
+//   courseId   String
+//   enrolledAt DateTime @default(now())
+  
+//   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+//   @@unique([userId, courseId])
+//   @@index([userId])
+//   @@map("user_courses")
+// }
+
+// model UserAssessment {
+//   id           String   @id @default(cuid())
+//   userId       String
+//   assessmentId String
+//   isCompleted  Boolean  @default(false)
+//   score        Int?
+//   completedAt  DateTime?
+  
+//   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  
+//   @@unique([userId, assessmentId])
+//   @@index([userId])
+//   @@map("user_assessments")
+// }
+
+model UserTopic {
+    id        String   @id @default(cuid())
+    userId    String
+    topicId   String
+    score     Float    @default(0.0) // User's score in this topic
+    updatedAt DateTime @updatedAt
+    
+    user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    topic     Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+    subtopics Subtopic[]
+    @@unique([userId, topicId])
+    @@index([userId])
+    @@map("user_topics")
+}
+
+// ============================================
+// COURSE STRUCTURE
+// ============================================
+
+model Course {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?  // For UI theming
+  icon        String?  // Icon identifier
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  topics      Topic[]
+  users       User[]
+  assessments Assessment[]
+  
+  @@map("courses")
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  courseId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subTopics   Subtopic[]
+  userTopics  UserTopic[]
+  
+  @@index([courseId])
+  @@map("topics")
+}
+
+model Subtopic {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  score       Int      // Display score within topic
+  topicId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  topic   Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  userTopics  UserTopic[]
+    
+  @@index([topicId])
+  @@map("subtopics")
+}
+
+// ============================================
+// QUESTIONS
+// ============================================
+
+model Question {
+  id            String   @id @default(cuid())
+  question      String   @db.Text
+  choices      String[] // Multiple choice options
+  answerIndex   Int      // Index of the correct answer in choices array
+
+  explanation   String?  @db.Text
+  difficulty    Int      @default(1) // 1-3 scale
+  subtopicId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  subtopic      Subtopic          @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  //attempts      QuestionAttempt[]
+  
+  @@index([subtopicId])
+  @@index([difficulty])
+  @@map("questions")
+}
+
+// ============================================
+// ASSESSMENTS
+// ============================================
+
+model Assessment {
+  id          String   @id @default(cuid())
+  name        String
+  courseId    String
+  date        DateTime
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  users       User[]
+  
+  @@index([courseId])
+  @@index([date])
+  @@map("assessments")
+}
+
+
+
+// ============================================
+// AUTHENTICATION
+// ============================================
 
 // Necessary for Next auth
 model Account {
@@ -47,23 +253,13 @@ model Account {
     @@unique([provider, providerAccountId])
 }
 
+
 model Session {
     id           String   @id @default(cuid())
     sessionToken String   @unique
     userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
 }
 
 model VerificationToken {
@@ -73,3 +269,4 @@ model VerificationToken {
 
     @@unique([identifier, token])
 }
+
