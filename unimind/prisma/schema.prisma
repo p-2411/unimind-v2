@@ -123,7 +123,6 @@ model UserTopic {
     
     user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
     topic     Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
-    subtopics Subtopic[]
     @@unique([userId, topicId])
     @@index([userId])
     @@map("user_topics")
