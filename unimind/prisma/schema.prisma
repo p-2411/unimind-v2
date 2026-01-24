@@ -116,6 +116,7 @@ model UserStats {
 
 model UserTopic {
     id        String   @id @default(cuid())
+    topicName String   @default("Untitled")
     userId    String
     topicId   String
     score     Float    @default(0.0) // User's score in this topic

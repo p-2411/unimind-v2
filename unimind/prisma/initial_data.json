@@ -1,0 +1,509 @@
+{
+  "users": [
+    {
+      "id": "user_01",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "password": "$2a$10$example_hashed_password_1",
+      "image": null,
+      "emailVerified": null
+    },
+    {
+      "id": "user_02",
+      "email": "jane.smith@example.com",
+      "name": "Jane Smith",
+      "password": "$2a$10$example_hashed_password_2",
+      "image": null,
+      "emailVerified": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "id": "user_03",
+      "email": "alex.johnson@example.com",
+      "name": "Alex Johnson",
+      "password": null,
+      "image": "https://example.com/avatars/alex.jpg",
+      "emailVerified": "2024-02-01T08:00:00.000Z"
+    }
+  ],
+
+  "userStats": [
+    {
+      "id": "stats_01",
+      "userId": "user_01",
+      "totalQuestionsAnswered": 150,
+      "totalCorrectAnswers": 120,
+      "totalTimeSpent": 7200000,
+      "level": 5,
+      "xp": 1250,
+      "currentStreak": 7,
+      "longestStreak": 14,
+      "lastActiveDate": "2024-03-15T18:30:00.000Z"
+    },
+    {
+      "id": "stats_02",
+      "userId": "user_02",
+      "totalQuestionsAnswered": 85,
+      "totalCorrectAnswers": 72,
+      "totalTimeSpent": 3600000,
+      "level": 3,
+      "xp": 720,
+      "currentStreak": 3,
+      "longestStreak": 10,
+      "lastActiveDate": "2024-03-14T12:00:00.000Z"
+    },
+    {
+      "id": "stats_03",
+      "userId": "user_03",
+      "totalQuestionsAnswered": 25,
+      "totalCorrectAnswers": 18,
+      "totalTimeSpent": 1200000,
+      "level": 1,
+      "xp": 180,
+      "currentStreak": 1,
+      "longestStreak": 5,
+      "lastActiveDate": "2024-03-10T09:15:00.000Z"
+    }
+  ],
+
+  "courses": [
+    {
+      "id": "course_01",
+      "name": "Introduction to Computer Science",
+      "description": "A foundational course covering the basics of computer science, including algorithms, data structures, and programming fundamentals.",
+      "color": "#3B82F6",
+      "icon": "computer"
+    },
+    {
+      "id": "course_02",
+      "name": "Calculus I",
+      "description": "An introductory calculus course covering limits, derivatives, and integrals with applications.",
+      "color": "#10B981",
+      "icon": "calculator"
+    },
+    {
+      "id": "course_03",
+      "name": "Organic Chemistry",
+      "description": "Study of the structure, properties, composition, reactions, and synthesis of carbon-containing compounds.",
+      "color": "#F59E0B",
+      "icon": "flask"
+    }
+  ],
+
+  "topics": [
+    {
+      "id": "topic_01",
+      "name": "Variables and Data Types",
+      "description": "Understanding primitive data types, variable declaration, and type conversion.",
+      "courseId": "course_01"
+    },
+    {
+      "id": "topic_02",
+      "name": "Control Flow",
+      "description": "Conditional statements, loops, and program flow control.",
+      "courseId": "course_01"
+    },
+    {
+      "id": "topic_03",
+      "name": "Arrays and Lists",
+      "description": "Working with sequential data structures and their operations.",
+      "courseId": "course_01"
+    },
+    {
+      "id": "topic_04",
+      "name": "Functions and Methods",
+      "description": "Defining and using functions, parameters, return values, and scope.",
+      "courseId": "course_01"
+    },
+    {
+      "id": "topic_05",
+      "name": "Limits",
+      "description": "Understanding limits, continuity, and the foundation of calculus.",
+      "courseId": "course_02"
+    },
+    {
+      "id": "topic_06",
+      "name": "Derivatives",
+      "description": "Rules of differentiation, chain rule, and applications of derivatives.",
+      "courseId": "course_02"
+    },
+    {
+      "id": "topic_07",
+      "name": "Integrals",
+      "description": "Indefinite and definite integrals, fundamental theorem of calculus.",
+      "courseId": "course_02"
+    },
+    {
+      "id": "topic_08",
+      "name": "Functional Groups",
+      "description": "Common organic functional groups and their properties.",
+      "courseId": "course_03"
+    },
+    {
+      "id": "topic_09",
+      "name": "Reaction Mechanisms",
+      "description": "Understanding how organic reactions occur at the molecular level.",
+      "courseId": "course_03"
+    },
+    {
+      "id": "topic_10",
+      "name": "Stereochemistry",
+      "description": "Spatial arrangement of atoms in molecules and its implications.",
+      "courseId": "course_03"
+    }
+  ],
+
+  "questions": [
+    {
+      "id": "question_01",
+      "question": "Which of the following is NOT a primitive data type in most programming languages?",
+      "choices": ["Integer", "Boolean", "Array", "Float"],
+      "answerIndex": 2,
+      "explanation": "Arrays are composite/reference data types that can hold multiple values, while integers, booleans, and floats are primitive types that hold single values.",
+      "difficulty": 1,
+      "topicId": "topic_01"
+    },
+    {
+      "id": "question_02",
+      "question": "What is the result of 5 / 2 in integer division?",
+      "choices": ["2.5", "2", "3", "Error"],
+      "answerIndex": 1,
+      "explanation": "In integer division, the decimal part is truncated, so 5 / 2 equals 2.",
+      "difficulty": 1,
+      "topicId": "topic_01"
+    },
+    {
+      "id": "question_03",
+      "question": "Which keyword is used to declare a constant variable in JavaScript?",
+      "choices": ["var", "let", "const", "static"],
+      "answerIndex": 2,
+      "explanation": "The 'const' keyword declares a block-scoped constant whose value cannot be reassigned.",
+      "difficulty": 2,
+      "topicId": "topic_01"
+    },
+    {
+      "id": "question_04",
+      "question": "What is the output of: if (0) { print('yes') } else { print('no') }",
+      "choices": ["yes", "no", "Error", "Nothing"],
+      "answerIndex": 1,
+      "explanation": "In most languages, 0 is considered a falsy value, so the else branch executes.",
+      "difficulty": 2,
+      "topicId": "topic_02"
+    },
+    {
+      "id": "question_05",
+      "question": "Which loop is guaranteed to execute at least once?",
+      "choices": ["for loop", "while loop", "do-while loop", "for-each loop"],
+      "answerIndex": 2,
+      "explanation": "A do-while loop checks the condition after executing the body, ensuring at least one execution.",
+      "difficulty": 1,
+      "topicId": "topic_02"
+    },
+    {
+      "id": "question_06",
+      "question": "What is the time complexity of accessing an element in an array by index?",
+      "choices": ["O(1)", "O(n)", "O(log n)", "O(n²)"],
+      "answerIndex": 0,
+      "explanation": "Array access by index is O(1) because memory addresses are calculated directly from the index.",
+      "difficulty": 2,
+      "topicId": "topic_03"
+    },
+    {
+      "id": "question_07",
+      "question": "What is the index of the first element in a zero-indexed array?",
+      "choices": ["1", "0", "-1", "Depends on the language"],
+      "answerIndex": 1,
+      "explanation": "In zero-indexed arrays (used by most modern languages), the first element is at index 0.",
+      "difficulty": 1,
+      "topicId": "topic_03"
+    },
+    {
+      "id": "question_08",
+      "question": "What does a function that returns nothing typically return?",
+      "choices": ["null", "undefined", "void/None", "0"],
+      "answerIndex": 2,
+      "explanation": "Functions without a return value have a void return type (or return None in Python).",
+      "difficulty": 1,
+      "topicId": "topic_04"
+    },
+    {
+      "id": "question_09",
+      "question": "What is recursion?",
+      "choices": [
+        "A loop that runs forever",
+        "A function that calls itself",
+        "A type of variable",
+        "An error handling mechanism"
+      ],
+      "answerIndex": 1,
+      "explanation": "Recursion occurs when a function calls itself, typically with a base case to stop the recursion.",
+      "difficulty": 2,
+      "topicId": "topic_04"
+    },
+    {
+      "id": "question_10",
+      "question": "What is the limit of (x² - 1)/(x - 1) as x approaches 1?",
+      "choices": ["0", "1", "2", "Undefined"],
+      "answerIndex": 2,
+      "explanation": "Factor the numerator: (x-1)(x+1)/(x-1) = x+1. As x→1, this equals 2.",
+      "difficulty": 2,
+      "topicId": "topic_05"
+    },
+    {
+      "id": "question_11",
+      "question": "What is the limit of sin(x)/x as x approaches 0?",
+      "choices": ["0", "1", "Infinity", "Does not exist"],
+      "answerIndex": 1,
+      "explanation": "This is a fundamental limit in calculus. Using L'Hôpital's rule or geometric proof, lim(x→0) sin(x)/x = 1.",
+      "difficulty": 3,
+      "topicId": "topic_05"
+    },
+    {
+      "id": "question_12",
+      "question": "What is the derivative of x³?",
+      "choices": ["x²", "3x²", "3x³", "x⁴/4"],
+      "answerIndex": 1,
+      "explanation": "Using the power rule: d/dx(xⁿ) = nxⁿ⁻¹, so d/dx(x³) = 3x².",
+      "difficulty": 1,
+      "topicId": "topic_06"
+    },
+    {
+      "id": "question_13",
+      "question": "What is the derivative of sin(x)?",
+      "choices": ["-sin(x)", "cos(x)", "-cos(x)", "tan(x)"],
+      "answerIndex": 1,
+      "explanation": "The derivative of sin(x) is cos(x). This is a fundamental trigonometric derivative.",
+      "difficulty": 1,
+      "topicId": "topic_06"
+    },
+    {
+      "id": "question_14",
+      "question": "Using the chain rule, what is the derivative of sin(2x)?",
+      "choices": ["cos(2x)", "2cos(2x)", "-2cos(2x)", "2sin(2x)"],
+      "answerIndex": 1,
+      "explanation": "By chain rule: d/dx[sin(u)] = cos(u)·du/dx. Here u=2x, so du/dx=2. Result: 2cos(2x).",
+      "difficulty": 2,
+      "topicId": "topic_06"
+    },
+    {
+      "id": "question_15",
+      "question": "What is the integral of 2x?",
+      "choices": ["x² + C", "2x² + C", "x + C", "2 + C"],
+      "answerIndex": 0,
+      "explanation": "The integral of 2x is x² + C, where C is the constant of integration.",
+      "difficulty": 1,
+      "topicId": "topic_07"
+    },
+    {
+      "id": "question_16",
+      "question": "What is ∫cos(x)dx?",
+      "choices": ["-sin(x) + C", "sin(x) + C", "-cos(x) + C", "tan(x) + C"],
+      "answerIndex": 1,
+      "explanation": "The integral of cos(x) is sin(x) + C, since the derivative of sin(x) is cos(x).",
+      "difficulty": 1,
+      "topicId": "topic_07"
+    },
+    {
+      "id": "question_17",
+      "question": "Which functional group has the structure R-OH?",
+      "choices": ["Aldehyde", "Ketone", "Alcohol", "Carboxylic acid"],
+      "answerIndex": 2,
+      "explanation": "R-OH represents an alcohol functional group, where R is a carbon chain and OH is a hydroxyl group.",
+      "difficulty": 1,
+      "topicId": "topic_08"
+    },
+    {
+      "id": "question_18",
+      "question": "What functional group is characterized by a C=O between two carbon atoms?",
+      "choices": ["Aldehyde", "Ketone", "Ester", "Amide"],
+      "answerIndex": 1,
+      "explanation": "A ketone has a carbonyl group (C=O) bonded to two carbon atoms (R-CO-R').",
+      "difficulty": 2,
+      "topicId": "topic_08"
+    },
+    {
+      "id": "question_19",
+      "question": "In an SN1 reaction, what forms as an intermediate?",
+      "choices": ["Free radical", "Carbocation", "Carbanion", "No intermediate"],
+      "answerIndex": 1,
+      "explanation": "SN1 reactions proceed through a carbocation intermediate after the leaving group departs.",
+      "difficulty": 2,
+      "topicId": "topic_09"
+    },
+    {
+      "id": "question_20",
+      "question": "Which reaction type involves simultaneous bond breaking and forming?",
+      "choices": ["SN1", "SN2", "E1", "Free radical"],
+      "answerIndex": 1,
+      "explanation": "SN2 reactions are concerted, meaning the nucleophile attacks as the leaving group departs simultaneously.",
+      "difficulty": 2,
+      "topicId": "topic_09"
+    },
+    {
+      "id": "question_21",
+      "question": "What type of isomers are mirror images of each other that cannot be superimposed?",
+      "choices": ["Structural isomers", "Geometric isomers", "Enantiomers", "Conformers"],
+      "answerIndex": 2,
+      "explanation": "Enantiomers are non-superimposable mirror images, like left and right hands.",
+      "difficulty": 2,
+      "topicId": "topic_10"
+    },
+    {
+      "id": "question_22",
+      "question": "A carbon with four different substituents is called:",
+      "choices": ["Achiral", "Chiral/Stereocenter", "Prochiral", "Meso"],
+      "answerIndex": 1,
+      "explanation": "A carbon with four different groups is a chiral center or stereocenter, capable of existing as enantiomers.",
+      "difficulty": 1,
+      "topicId": "topic_10"
+    },
+    {
+      "id": "question_23",
+      "question": "What is the product rule in differentiation for f(x)·g(x)?",
+      "choices": [
+        "f'(x)·g'(x)",
+        "f'(x)·g(x) + f(x)·g'(x)",
+        "f(x)·g'(x) - f'(x)·g(x)",
+        "[f(x)·g(x)]'"
+      ],
+      "answerIndex": 1,
+      "explanation": "The product rule states that (fg)' = f'g + fg', where both functions contribute to the derivative.",
+      "difficulty": 2,
+      "topicId": "topic_06"
+    },
+    {
+      "id": "question_24",
+      "question": "What is a closure in programming?",
+      "choices": [
+        "A way to close a file",
+        "A function that has access to variables from its outer scope",
+        "A type of loop",
+        "An error handling mechanism"
+      ],
+      "answerIndex": 1,
+      "explanation": "A closure is a function that retains access to variables from its lexical scope, even after the outer function has returned.",
+      "difficulty": 3,
+      "topicId": "topic_04"
+    },
+    {
+      "id": "question_25",
+      "question": "What is the definite integral of 2x from 0 to 3?",
+      "choices": ["3", "6", "9", "12"],
+      "answerIndex": 2,
+      "explanation": "∫₀³ 2x dx = [x²]₀³ = 3² - 0² = 9.",
+      "difficulty": 2,
+      "topicId": "topic_07"
+    }
+  ],
+
+  "assessments": [
+    {
+      "id": "assessment_01",
+      "name": "CS101 Midterm Exam",
+      "courseId": "course_01",
+      "date": "2024-03-20T09:00:00.000Z",
+      "description": "Midterm examination covering variables, control flow, and basic data structures."
+    },
+    {
+      "id": "assessment_02",
+      "name": "CS101 Final Exam",
+      "courseId": "course_01",
+      "date": "2024-05-15T09:00:00.000Z",
+      "description": "Comprehensive final exam covering all course topics including functions and advanced concepts."
+    },
+    {
+      "id": "assessment_03",
+      "name": "Calculus Quiz 1",
+      "courseId": "course_02",
+      "date": "2024-02-28T14:00:00.000Z",
+      "description": "Quiz on limits and continuity."
+    },
+    {
+      "id": "assessment_04",
+      "name": "Calculus Midterm",
+      "courseId": "course_02",
+      "date": "2024-03-25T10:00:00.000Z",
+      "description": "Midterm covering limits and derivatives."
+    },
+    {
+      "id": "assessment_05",
+      "name": "Organic Chemistry Lab Practical",
+      "courseId": "course_03",
+      "date": "2024-04-10T13:00:00.000Z",
+      "description": "Hands-on lab examination testing identification of functional groups and reaction mechanisms."
+    }
+  ],
+
+  "userTopics": [
+    {
+      "id": "ut_01",
+      "userId": "user_01",
+      "topicId": "topic_01",
+      "score": 85.5
+    },
+    {
+      "id": "ut_02",
+      "userId": "user_01",
+      "topicId": "topic_02",
+      "score": 78.0
+    },
+    {
+      "id": "ut_03",
+      "userId": "user_01",
+      "topicId": "topic_03",
+      "score": 92.0
+    },
+    {
+      "id": "ut_04",
+      "userId": "user_01",
+      "topicId": "topic_05",
+      "score": 70.5
+    },
+    {
+      "id": "ut_05",
+      "userId": "user_02",
+      "topicId": "topic_01",
+      "score": 90.0
+    },
+    {
+      "id": "ut_06",
+      "userId": "user_02",
+      "topicId": "topic_02",
+      "score": 88.5
+    },
+    {
+      "id": "ut_07",
+      "userId": "user_02",
+      "topicId": "topic_08",
+      "score": 65.0
+    },
+    {
+      "id": "ut_08",
+      "userId": "user_03",
+      "topicId": "topic_05",
+      "score": 72.0
+    },
+    {
+      "id": "ut_09",
+      "userId": "user_03",
+      "topicId": "topic_06",
+      "score": 68.0
+    }
+  ],
+
+  "courseEnrollments": [
+    { "userId": "user_01", "courseId": "course_01" },
+    { "userId": "user_01", "courseId": "course_02" },
+    { "userId": "user_02", "courseId": "course_01" },
+    { "userId": "user_02", "courseId": "course_03" },
+    { "userId": "user_03", "courseId": "course_02" }
+  ],
+
+  "assessmentUsers": [
+    { "userId": "user_01", "assessmentId": "assessment_01" },
+    { "userId": "user_01", "assessmentId": "assessment_03" },
+    { "userId": "user_02", "assessmentId": "assessment_01" },
+    { "userId": "user_02", "assessmentId": "assessment_05" },
+    { "userId": "user_03", "assessmentId": "assessment_03" },
+    { "userId": "user_03", "assessmentId": "assessment_04" }
+  ]
+}
