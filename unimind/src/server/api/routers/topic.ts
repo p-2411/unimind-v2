@@ -8,11 +8,11 @@ import {
 
 
 export const topicRouter = createTRPCRouter({
-    getAll: publicProcedure.query( async ({ ctx }) => {
+    getAll: protectedProcedure.query(async ({ ctx }) => {
         return await ctx.db.userTopic.findMany({
             where: {
-                userId: ctx.session?.user.id
-            }
+                userId: ctx.session.user.id,
+            },
         });
-    })
+    }),
 });
