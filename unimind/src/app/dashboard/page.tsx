@@ -1,4 +1,4 @@
-import { api, HydrateClient } from "~/trpc/server";
+import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 
 
