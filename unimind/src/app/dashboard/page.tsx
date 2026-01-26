@@ -1,7 +1,10 @@
+import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 
 
-export default function Dashboard() {
+export default async function Dashboard() {
+
+    const topics = await api.topic.getAll();
 
     return (
         <>
@@ -12,8 +15,12 @@ export default function Dashboard() {
         <div className="flex flex-1 flex-col gap-4 p-4">
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">
                 <div className="aspect-video rounded-xl bg-muted/50" />
-                <div className="aspect-video rounded-xl bg-muted/50" />
-                <div className="aspect-video rounded-xl bg-muted/50" />
+                {topics.slice(0, 3).map((topic => (
+                    <div key={topic.id} className="aspect-video rounded-xl bg-muted/50"> 
+                        Topic Name: {topic.topicName} <br />
+                        Topic Score: {topic.score}
+                    </div>
+                )))}
             </div>
         <div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min">
             {/* Main content area */}
