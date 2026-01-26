@@ -1,9 +1,12 @@
 import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { DailyStreak } from "~/app/dashboard/components/daily-streak";
+import { Topics } from "~/app/dashboard/components/topics";
+import { Assessments } from "~/app/dashboard/components/assessments";
+import { Questions } from "~/app/dashboard/components/questions";
 
 
 export default async function Dashboard() {
-
     const topics = await api.topic.getAll();
 
     return (
@@ -14,22 +17,14 @@ export default async function Dashboard() {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
             <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                <div className="aspect-video rounded-xl bg-muted/50" />
-                {topics.slice(0, 3).map((topic => (
-                    <div key={topic.id} className="aspect-video rounded-xl bg-muted/50"> 
-                        Topic Name: {topic.topicName} <br />
-                        Topic Score: {topic.score}
-                    </div>
-                )))}
+                <DailyStreak />
+                <Topics topics={topics} />
             </div>
-        <div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min">
-            {/* Main content area */}
-            <div className="p-4">
-                <h2 className="text-2xl font-bold">Welcome to Unimind</h2>
-                <p className="mt-2 text-muted-foreground" />
+            <div className="grid gap-4 md:grid-cols-2">
+                <Assessments />
+                <Questions />
             </div>
-        </div>
-        </div>
+                </div>
         </>
     )
 }
