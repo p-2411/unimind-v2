@@ -31,14 +31,19 @@ export async function middleware(request: NextRequest) {
   const user = data?.claims;
 
   const pathname = request.nextUrl.pathname;
-  const isAuthRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/signup") ||
-    pathname.startsWith("/auth");
+  const isAuthPage =
+    pathname === "/login" || pathname === "/signup";
+  const isAuthApi = pathname.startsWith("/auth");
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isAuthPage && !isAuthApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (isAuthPage || pathname === "/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
