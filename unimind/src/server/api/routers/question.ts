@@ -1,10 +1,84 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+export const questionRouter = createTRPCRouter({
+  answer: protectedProcedure
+    .input(
+      z.object({
+        questionId: z.string(),
+        choiceIndex: z.number().int().min(0),
+        timeSpentMs: z.number().int().min(0).default(0),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
 
-export const questionRouter = createTRPCRouter({});
+      const question = await ctx.db.question.findUnique({
+        where: { id: input.questionId },
+        select: { id: true, topicId: true, answerIndex: true },
+      });
+      if (!question) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+      }
+
+      const isCorrect = input.choiceIndex === question.answerIndex;
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+
+      return ctx.db.$transaction(async (tx) => {
+        const existing = await tx.userTopic.findUnique({
+          where: { userId_topicId: { userId, topicId: question.topicId } },
+          select: { correctCount: true, totalCount: true },
+        });
+
+        const correctCount = (existing?.correctCount ?? 0) + (isCorrect ? 1 : 0);
+        const totalCount = (existing?.totalCount ?? 0) + 1;
+        const score = totalCount === 0 ? 0 : correctCount / totalCount;
+
+        const topic = await tx.topic.findUnique({
+          where: { id: question.topicId },
+          select: { name: true },
+        });
+
+        const userTopic = await tx.userTopic.upsert({
+          where: { userId_topicId: { userId, topicId: question.topicId } },
+          create: {
+            userId,
+            topicId: question.topicId,
+            topicName: topic?.name ?? "Untitled",
+            score,
+            correctCount,
+            totalCount,
+            lastAnsweredAt: new Date(),
+          },
+          update: {
+            score,
+            correctCount,
+            totalCount,
+            lastAnsweredAt: new Date(),
+          },
+        });
+
+        await tx.userStats.upsert({
+          where: { userId },
+          create: {
+            userId,
+            totalQuestionsAnswered: 1,
+            totalCorrectAnswers: isCorrect ? 1 : 0,
+            totalTimeSpent: input.timeSpentMs,
+            lastActiveDate: today,
+          },
+          update: {
+            totalQuestionsAnswered: { increment: 1 },
+            totalCorrectAnswers: { increment: isCorrect ? 1 : 0 },
+            totalTimeSpent: { increment: input.timeSpentMs },
+            lastActiveDate: today,
+          },
+        });
+
+        return { isCorrect, userTopic };
+      });
+    }),
+});
