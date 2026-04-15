@@ -24,7 +24,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  courses     Course[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
   stats       UserStats?
@@ -151,7 +150,6 @@ model Course {
   updatedAt   DateTime @updatedAt
 
   topics      Topic[]
-  users       User[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
 
