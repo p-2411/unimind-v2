@@ -14,8 +14,7 @@ async function main() {
   await prisma.assessment.deleteMany();
   await prisma.userStats.deleteMany();
   await prisma.course.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.account.deleteMany();
+  // removed: NextAuth session and account models
   await prisma.user.deleteMany();
 
   // Seed Users
