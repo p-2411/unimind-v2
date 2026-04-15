@@ -35,7 +35,7 @@ model User {
 model UserStats {
     
     id            String   @id @default(cuid())
-    userId        String   @unique
+    userId        String   @unique @db.Uuid
     totalQuestionsAnswered Int @default(0)
     totalCorrectAnswers    Int @default(0)
     totalTimeSpent         Int @default(0) // in milliseconds
@@ -108,7 +108,7 @@ model UserStats {
 model UserTopic {
     id        String   @id @default(cuid())
     topicName String   @default("Untitled")
-    userId    String
+    userId    String   @db.Uuid
     topicId   String
     score     Float    @default(0.0) // User's score in this topic
     updatedAt DateTime @updatedAt
