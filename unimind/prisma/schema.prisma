@@ -111,6 +111,9 @@ model UserTopic {
     userId    String   @db.Uuid
     topicId   String
     score     Float    @default(0.0) // User's score in this topic
+    correctCount   Int       @default(0)
+    totalCount     Int       @default(0)
+    lastAnsweredAt DateTime?
     updatedAt DateTime @updatedAt
     
     user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)

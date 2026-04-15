@@ -4154,10 +4154,14 @@ export namespace Prisma {
 
   export type UserTopicAvgAggregateOutputType = {
     score: number | null
+    correctCount: number | null
+    totalCount: number | null
   }
 
   export type UserTopicSumAggregateOutputType = {
     score: number | null
+    correctCount: number | null
+    totalCount: number | null
   }
 
   export type UserTopicMinAggregateOutputType = {
@@ -4166,6 +4170,9 @@ export namespace Prisma {
     userId: string | null
     topicId: string | null
     score: number | null
+    correctCount: number | null
+    totalCount: number | null
+    lastAnsweredAt: Date | null
     updatedAt: Date | null
   }
 
@@ -4175,6 +4182,9 @@ export namespace Prisma {
     userId: string | null
     topicId: string | null
     score: number | null
+    correctCount: number | null
+    totalCount: number | null
+    lastAnsweredAt: Date | null
     updatedAt: Date | null
   }
 
@@ -4184,6 +4194,9 @@ export namespace Prisma {
     userId: number
     topicId: number
     score: number
+    correctCount: number
+    totalCount: number
+    lastAnsweredAt: number
     updatedAt: number
     _all: number
   }
@@ -4191,10 +4204,14 @@ export namespace Prisma {
 
   export type UserTopicAvgAggregateInputType = {
     score?: true
+    correctCount?: true
+    totalCount?: true
   }
 
   export type UserTopicSumAggregateInputType = {
     score?: true
+    correctCount?: true
+    totalCount?: true
   }
 
   export type UserTopicMinAggregateInputType = {
@@ -4203,6 +4220,9 @@ export namespace Prisma {
     userId?: true
     topicId?: true
     score?: true
+    correctCount?: true
+    totalCount?: true
+    lastAnsweredAt?: true
     updatedAt?: true
   }
 
@@ -4212,6 +4232,9 @@ export namespace Prisma {
     userId?: true
     topicId?: true
     score?: true
+    correctCount?: true
+    totalCount?: true
+    lastAnsweredAt?: true
     updatedAt?: true
   }
 
@@ -4221,6 +4244,9 @@ export namespace Prisma {
     userId?: true
     topicId?: true
     score?: true
+    correctCount?: true
+    totalCount?: true
+    lastAnsweredAt?: true
     updatedAt?: true
     _all?: true
   }
@@ -4317,6 +4343,9 @@ export namespace Prisma {
     userId: string
     topicId: string
     score: number
+    correctCount: number
+    totalCount: number
+    lastAnsweredAt: Date | null
     updatedAt: Date
     _count: UserTopicCountAggregateOutputType | null
     _avg: UserTopicAvgAggregateOutputType | null
@@ -4345,6 +4374,9 @@ export namespace Prisma {
     userId?: boolean
     topicId?: boolean
     score?: boolean
+    correctCount?: boolean
+    totalCount?: boolean
+    lastAnsweredAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     topic?: boolean | TopicDefaultArgs<ExtArgs>
@@ -4356,6 +4388,9 @@ export namespace Prisma {
     userId?: boolean
     topicId?: boolean
     score?: boolean
+    correctCount?: boolean
+    totalCount?: boolean
+    lastAnsweredAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     topic?: boolean | TopicDefaultArgs<ExtArgs>
@@ -4367,6 +4402,9 @@ export namespace Prisma {
     userId?: boolean
     topicId?: boolean
     score?: boolean
+    correctCount?: boolean
+    totalCount?: boolean
+    lastAnsweredAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     topic?: boolean | TopicDefaultArgs<ExtArgs>
@@ -4378,10 +4416,13 @@ export namespace Prisma {
     userId?: boolean
     topicId?: boolean
     score?: boolean
+    correctCount?: boolean
+    totalCount?: boolean
+    lastAnsweredAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserTopicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "topicName" | "userId" | "topicId" | "score" | "updatedAt", ExtArgs["result"]["userTopic"]>
+  export type UserTopicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "topicName" | "userId" | "topicId" | "score" | "correctCount" | "totalCount" | "lastAnsweredAt" | "updatedAt", ExtArgs["result"]["userTopic"]>
   export type UserTopicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     topic?: boolean | TopicDefaultArgs<ExtArgs>
@@ -4407,6 +4448,9 @@ export namespace Prisma {
       userId: string
       topicId: string
       score: number
+      correctCount: number
+      totalCount: number
+      lastAnsweredAt: Date | null
       updatedAt: Date
     }, ExtArgs["result"]["userTopic"]>
     composites: {}
@@ -4838,6 +4882,9 @@ export namespace Prisma {
     readonly userId: FieldRef<"UserTopic", 'String'>
     readonly topicId: FieldRef<"UserTopic", 'String'>
     readonly score: FieldRef<"UserTopic", 'Float'>
+    readonly correctCount: FieldRef<"UserTopic", 'Int'>
+    readonly totalCount: FieldRef<"UserTopic", 'Int'>
+    readonly lastAnsweredAt: FieldRef<"UserTopic", 'DateTime'>
     readonly updatedAt: FieldRef<"UserTopic", 'DateTime'>
   }
     
@@ -12069,6 +12116,9 @@ export namespace Prisma {
     userId: 'userId',
     topicId: 'topicId',
     score: 'score',
+    correctCount: 'correctCount',
+    totalCount: 'totalCount',
+    lastAnsweredAt: 'lastAnsweredAt',
     updatedAt: 'updatedAt'
   };
 
@@ -12408,6 +12458,9 @@ export namespace Prisma {
     userId?: UuidFilter<"UserTopic"> | string
     topicId?: StringFilter<"UserTopic"> | string
     score?: FloatFilter<"UserTopic"> | number
+    correctCount?: IntFilter<"UserTopic"> | number
+    totalCount?: IntFilter<"UserTopic"> | number
+    lastAnsweredAt?: DateTimeNullableFilter<"UserTopic"> | Date | string | null
     updatedAt?: DateTimeFilter<"UserTopic"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     topic?: XOR<TopicScalarRelationFilter, TopicWhereInput>
@@ -12419,6 +12472,9 @@ export namespace Prisma {
     userId?: SortOrder
     topicId?: SortOrder
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
+    lastAnsweredAt?: SortOrderInput | SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
     topic?: TopicOrderByWithRelationInput
@@ -12434,6 +12490,9 @@ export namespace Prisma {
     userId?: UuidFilter<"UserTopic"> | string
     topicId?: StringFilter<"UserTopic"> | string
     score?: FloatFilter<"UserTopic"> | number
+    correctCount?: IntFilter<"UserTopic"> | number
+    totalCount?: IntFilter<"UserTopic"> | number
+    lastAnsweredAt?: DateTimeNullableFilter<"UserTopic"> | Date | string | null
     updatedAt?: DateTimeFilter<"UserTopic"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     topic?: XOR<TopicScalarRelationFilter, TopicWhereInput>
@@ -12445,6 +12504,9 @@ export namespace Prisma {
     userId?: SortOrder
     topicId?: SortOrder
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
+    lastAnsweredAt?: SortOrderInput | SortOrder
     updatedAt?: SortOrder
     _count?: UserTopicCountOrderByAggregateInput
     _avg?: UserTopicAvgOrderByAggregateInput
@@ -12462,6 +12524,9 @@ export namespace Prisma {
     userId?: UuidWithAggregatesFilter<"UserTopic"> | string
     topicId?: StringWithAggregatesFilter<"UserTopic"> | string
     score?: FloatWithAggregatesFilter<"UserTopic"> | number
+    correctCount?: IntWithAggregatesFilter<"UserTopic"> | number
+    totalCount?: IntWithAggregatesFilter<"UserTopic"> | number
+    lastAnsweredAt?: DateTimeNullableWithAggregatesFilter<"UserTopic"> | Date | string | null
     updatedAt?: DateTimeWithAggregatesFilter<"UserTopic"> | Date | string
   }
 
@@ -13058,6 +13123,9 @@ export namespace Prisma {
     id?: string
     topicName?: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutTopicsInput
     topic: TopicCreateNestedOneWithoutUserTopicsInput
@@ -13069,6 +13137,9 @@ export namespace Prisma {
     userId: string
     topicId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -13076,6 +13147,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     topicName?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutTopicsNestedInput
     topic?: TopicUpdateOneRequiredWithoutUserTopicsNestedInput
@@ -13087,6 +13161,9 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     topicId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -13096,6 +13173,9 @@ export namespace Prisma {
     userId: string
     topicId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -13103,6 +13183,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     topicName?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -13112,6 +13195,9 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     topicId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -13888,11 +13974,16 @@ export namespace Prisma {
     userId?: SortOrder
     topicId?: SortOrder
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
+    lastAnsweredAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type UserTopicAvgOrderByAggregateInput = {
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
   }
 
   export type UserTopicMaxOrderByAggregateInput = {
@@ -13901,6 +13992,9 @@ export namespace Prisma {
     userId?: SortOrder
     topicId?: SortOrder
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
+    lastAnsweredAt?: SortOrder
     updatedAt?: SortOrder
   }
 
@@ -13910,11 +14004,16 @@ export namespace Prisma {
     userId?: SortOrder
     topicId?: SortOrder
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
+    lastAnsweredAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type UserTopicSumOrderByAggregateInput = {
     score?: SortOrder
+    correctCount?: SortOrder
+    totalCount?: SortOrder
   }
 
   export type FloatWithAggregatesFilter<$PrismaModel = never> = {
@@ -15167,6 +15266,9 @@ export namespace Prisma {
     id?: string
     topicName?: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
     topic: TopicCreateNestedOneWithoutUserTopicsInput
   }
@@ -15176,6 +15278,9 @@ export namespace Prisma {
     topicName?: string
     topicId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -15306,6 +15411,9 @@ export namespace Prisma {
     userId?: UuidFilter<"UserTopic"> | string
     topicId?: StringFilter<"UserTopic"> | string
     score?: FloatFilter<"UserTopic"> | number
+    correctCount?: IntFilter<"UserTopic"> | number
+    totalCount?: IntFilter<"UserTopic"> | number
+    lastAnsweredAt?: DateTimeNullableFilter<"UserTopic"> | Date | string | null
     updatedAt?: DateTimeFilter<"UserTopic"> | Date | string
   }
 
@@ -15868,6 +15976,9 @@ export namespace Prisma {
     id?: string
     topicName?: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutTopicsInput
   }
@@ -15877,6 +15988,9 @@ export namespace Prisma {
     topicName?: string
     userId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -16357,6 +16471,9 @@ export namespace Prisma {
     topicName?: string
     topicId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -16418,6 +16535,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     topicName?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     topic?: TopicUpdateOneRequiredWithoutUserTopicsNestedInput
   }
@@ -16427,6 +16547,9 @@ export namespace Prisma {
     topicName?: StringFieldUpdateOperationsInput | string
     topicId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -16435,6 +16558,9 @@ export namespace Prisma {
     topicName?: StringFieldUpdateOperationsInput | string
     topicId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -16571,6 +16697,9 @@ export namespace Prisma {
     topicName?: string
     userId: string
     score?: number
+    correctCount?: number
+    totalCount?: number
+    lastAnsweredAt?: Date | string | null
     updatedAt?: Date | string
   }
 
@@ -16640,6 +16769,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     topicName?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutTopicsNestedInput
   }
@@ -16649,6 +16781,9 @@ export namespace Prisma {
     topicName?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -16657,6 +16792,9 @@ export namespace Prisma {
     topicName?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     score?: FloatFieldUpdateOperationsInput | number
+    correctCount?: IntFieldUpdateOperationsInput | number
+    totalCount?: IntFieldUpdateOperationsInput | number
+    lastAnsweredAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

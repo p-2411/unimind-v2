@@ -149,6 +149,9 @@ exports.Prisma.UserTopicScalarFieldEnum = {
   userId: 'userId',
   topicId: 'topicId',
   score: 'score',
+  correctCount: 'correctCount',
+  totalCount: 'totalCount',
+  lastAnsweredAt: 'lastAnsweredAt',
   updatedAt: 'updatedAt'
 };
 
