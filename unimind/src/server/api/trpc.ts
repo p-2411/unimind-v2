@@ -35,11 +35,15 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   let session: { user: { id: string; email: string } } | null = null;
 
   if (user) {
-    await db.user.upsert({
+    const existing = await db.user.findUnique({
       where: { id: user.id },
-      update: { email: user.email ?? "" },
-      create: { id: user.id, email: user.email ?? "" },
+      select: { id: true },
     });
+    if (!existing) {
+      await db.user.create({
+        data: { id: user.id, email: user.email ?? "" },
+      });
+    }
     session = { user: { id: user.id, email: user.email ?? "" } };
   }
 
@@ -100,12 +104,6 @@ export const createTRPCRouter = t.router;
  */
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
-
-  if (t._config.isDev) {
-    // artificial delay in dev
-    const waitMs = Math.floor(Math.random() * 400) + 100;
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
-  }
 
   const result = await next();
 
