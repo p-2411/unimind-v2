@@ -33,7 +33,9 @@
   - Logic: find the session user's top `UserTopic` ordered by `score desc, lastAnsweredAt asc nulls first`. If none exists, fall back to a random topic. Pick a random `Question` from that topic.
   - Returns same shape as a `list` item (single object, not array).
 
-- **`answer`** — already implemented, **extend** to include `answerIndex` and `explanation` on the return so the client can reveal without a second fetch.
+- **`answer`** — already implemented, **extend** to:
+  - Include `answerIndex` and `explanation` on the return so the client can reveal without a second fetch.
+  - Replace the inline `score = correctCount / totalCount` with a call to a new helper `computeTopicScore({ prevScore, isCorrect })` in `src/server/lib/scoring.ts`. Initial implementation: `prevScore + (isCorrect ? 1 : -1)`. Deliberately dumb — the helper is the single place to evolve later.
 
 ### `userRouter` (`src/server/api/routers/user.ts`)
 
@@ -44,7 +46,7 @@
     {
       topicsStarted: number;          // count(UserTopic) for user
       topicsCoveredThisWeek: number;  // count(UserTopic where lastAnsweredAt >= now - 7d)
-      accuracy: number;               // average(UserTopic.score) or 0
+      accuracy: number;               // sum(correctCount) / sum(totalCount), or 0 if no answers. Deliberately independent of UserTopic.score so changes to the scoring algorithm don't affect the Accuracy tile.
       currentStreak: number;
       longestStreak: number;
       level: number;
@@ -118,4 +120,5 @@ Dashboard (server component)
 
 - `question.forMe` fallback: user with zero `UserTopic` rows. Behaviour: pick a random `Question` across all topics; the dashboard tiles render an empty state anyway. Document this in the implementation.
 - `question.answer` is called twice if the seed-pick auto-trigger races with a user's manual Check on the same card. Guard: skip the auto-trigger when `revealed[seedId]` is already set (it is, from initial state derived from URL params).
-- Avg accuracy is `average(score)` across topics, not `sum(correctCount)/sum(totalCount)`. This keeps every topic equally weighted regardless of how many questions they've answered. Flagging — tell me if you'd rather weight by question count.
+- Accuracy is `sum(correctCount)/sum(totalCount)` — decoupled from `UserTopic.score` so the scoring algorithm can change without touching the tile.
+- `question.forMe` picks the user's **highest-score** `UserTopic`. Since the initial scoring function is `+1/-1`, "highest score" correlates with "most net correct" — a reasonable proxy for "strongest topic" until the algorithm is replaced.
