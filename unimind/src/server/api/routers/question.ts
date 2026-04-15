@@ -51,6 +51,44 @@ export const questionRouter = createTRPCRouter({
       });
     }),
 
+  forMe: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const selectFields = {
+      id: true,
+      question: true,
+      choices: true,
+      answerIndex: true,
+      explanation: true,
+      difficulty: true,
+      topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+      subtopic: { select: { id: true, name: true } },
+    } as const;
+
+    const topTopic = await ctx.db.userTopic.findFirst({
+      where: { userId },
+      orderBy: [{ score: "desc" }, { lastAnsweredAt: "asc" }],
+      select: { topicId: true },
+    });
+
+    const topicId = topTopic?.topicId;
+
+    const total = await ctx.db.question.count(
+      topicId ? { where: { topicId } } : undefined,
+    );
+    if (total === 0) return null;
+
+    const skip = Math.floor(Math.random() * total);
+    const [question] = await ctx.db.question.findMany({
+      where: topicId ? { topicId } : undefined,
+      skip,
+      take: 1,
+      select: selectFields,
+    });
+
+    return question ?? null;
+  }),
+
   answer: protectedProcedure
     .input(
       z.object({
