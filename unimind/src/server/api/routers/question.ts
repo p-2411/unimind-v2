@@ -2,6 +2,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  computeTopicScore,
+  INITIAL_TOPIC_SCORE,
+} from "~/server/lib/scoring";
 
 export const questionRouter = createTRPCRouter({
   answer: protectedProcedure
@@ -17,7 +21,12 @@ export const questionRouter = createTRPCRouter({
 
       const question = await ctx.db.question.findUnique({
         where: { id: input.questionId },
-        select: { id: true, topicId: true, answerIndex: true },
+        select: {
+          id: true,
+          topicId: true,
+          answerIndex: true,
+          explanation: true,
+        },
       });
       if (!question) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
@@ -27,22 +36,23 @@ export const questionRouter = createTRPCRouter({
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
-      return ctx.db.$transaction(async (tx) => {
+      const userTopic = await ctx.db.$transaction(async (tx) => {
         const existing = await tx.userTopic.findUnique({
           where: { userId_topicId: { userId, topicId: question.topicId } },
-          select: { correctCount: true, totalCount: true },
+          select: { score: true, correctCount: true, totalCount: true },
         });
 
+        const prevScore = existing?.score ?? INITIAL_TOPIC_SCORE;
+        const score = computeTopicScore({ prevScore, isCorrect });
         const correctCount = (existing?.correctCount ?? 0) + (isCorrect ? 1 : 0);
         const totalCount = (existing?.totalCount ?? 0) + 1;
-        const score = totalCount === 0 ? 0 : correctCount / totalCount;
 
         const topic = await tx.topic.findUnique({
           where: { id: question.topicId },
           select: { name: true },
         });
 
-        const userTopic = await tx.userTopic.upsert({
+        const updated = await tx.userTopic.upsert({
           where: { userId_topicId: { userId, topicId: question.topicId } },
           create: {
             userId,
@@ -78,7 +88,14 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        return { isCorrect, userTopic };
+        return updated;
       });
+
+      return {
+        isCorrect,
+        answerIndex: question.answerIndex,
+        explanation: question.explanation,
+        userTopic,
+      };
     }),
 });
