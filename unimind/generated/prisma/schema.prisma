@@ -2,14 +2,14 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-    provider  = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -34,24 +34,22 @@ model User {
 }
 
 model UserStats {
-    
-    id            String   @id @default(cuid())
-    userId        String   @unique @db.Uuid
-    totalQuestionsAnswered Int @default(0)
-    totalCorrectAnswers    Int @default(0)
-    totalTimeSpent         Int @default(0) // in milliseconds
+  id                     String @id @default(cuid())
+  userId                 String @unique @db.Uuid
+  totalQuestionsAnswered Int    @default(0)
+  totalCorrectAnswers    Int    @default(0)
+  totalTimeSpent         Int    @default(0) // in milliseconds
 
-  
   // Gamification
-    level         Int      @default(1)
-    xp            Int      @default(0)
-    currentStreak Int      @default(0)
-    longestStreak Int      @default(0)
-    lastActiveDate DateTime?
+  level          Int       @default(1)
+  xp             Int       @default(0)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime?
 
-    user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    
-    @@map("user_stats")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
 }
 
 // model QuestionAttempt {
@@ -61,16 +59,16 @@ model UserStats {
 //   isCorrect       Boolean
 //   timeSpent       Int?     // milliseconds
 //   answeredAt      DateTime @default(now())
-  
+
 //   // Active Recall Algorithm Fields
 // //   easeFactor      Float    @default(2.5)  // SM-2 algorithm
 // //   interval        Int      @default(0)    // Days until next review
 // //   repetitions     Int      @default(0)    // Number of successful reviews
 // //   nextReviewDate  DateTime?
-  
+
 //   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 //   question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  
+
 //   @@index([userId, questionId])
 // //   @@index([userId, nextReviewDate])
 //   @@map("question_attempts")
@@ -81,10 +79,10 @@ model UserStats {
 //   userId     String
 //   courseId   String
 //   enrolledAt DateTime @default(now())
-  
+
 //   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 //   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
+
 //   @@unique([userId, courseId])
 //   @@index([userId])
 //   @@map("user_courses")
@@ -97,29 +95,30 @@ model UserStats {
 //   isCompleted  Boolean  @default(false)
 //   score        Int?
 //   completedAt  DateTime?
-  
+
 //   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 //   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  
+
 //   @@unique([userId, assessmentId])
 //   @@index([userId])
 //   @@map("user_assessments")
 // }
 
 model UserTopic {
-    id        String   @id @default(cuid())
-    topicName String   @default("Untitled")
-    userId    String   @db.Uuid
-    topicId   String
-    score     Float    @default(0.0) // User's score in this topic
-    updatedAt DateTime @updatedAt
-    
-    user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    topic     Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
-    // subtopics Subtopic[]
-    @@unique([userId, topicId])
-    @@index([userId])
-    @@map("user_topics")
+  id        String   @id @default(cuid())
+  topicName String   @default("Untitled")
+  userId    String   @db.Uuid
+  topicId   String
+  score     Float    @default(0.0) // User's score in this topic
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  // subtopics Subtopic[]
+  @@unique([userId, topicId])
+  @@index([userId])
+  @@map("user_topics")
 }
 
 model UserCourse {
@@ -146,16 +145,16 @@ model Course {
   id          String   @id @default(cuid())
   name        String
   description String?
-  color       String?  // For UI theming
-  icon        String?  // Icon identifier
+  color       String? // For UI theming
+  icon        String? // Icon identifier
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   topics      Topic[]
   users       User[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
-  
+
   @@map("courses")
 }
 
@@ -166,12 +165,12 @@ model Topic {
   courseId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  subTopics   Subtopic[]
-  questions   Question[]
-  userTopics  UserTopic[]
-  
+
+  course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subTopics  Subtopic[]
+  questions  Question[]
+  userTopics UserTopic[]
+
   @@index([courseId])
   @@map("topics")
 }
@@ -196,20 +195,20 @@ model Subtopic {
 // ============================================
 
 model Question {
-  id            String   @id @default(cuid())
-  question      String   @db.Text
-  choices      String[] // Multiple choice options
-  answerIndex   Int      // Index of the correct answer in choices array
+  id          String   @id @default(cuid())
+  question    String   @db.Text
+  choices     String[] // Multiple choice options
+  answerIndex Int // Index of the correct answer in choices array
 
-  explanation   String?  @db.Text
-  difficulty    Int      @default(1) // 1-3 scale
-  topicId       String
-  subtopicId    String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  explanation String?  @db.Text
+  difficulty  Int      @default(1) // 1-3 scale
+  topicId     String
+  subtopicId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  topic         Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  subtopic      Subtopic          @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
+  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subtopic Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Cascade)
   //attempts      QuestionAttempt[]
 
   @@index([topicId])
@@ -230,15 +229,11 @@ model Assessment {
   description String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  users       User[]
-  
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  users  User[]
+
   @@index([courseId])
   @@index([date])
   @@map("assessments")
 }
-
-
-
-
