@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSupabase } from "~/components/providers/supabase-provider";
 
 export default function SignupPage() {
   const { supabase } = useSupabase();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +24,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.replace("/");
-    router.refresh();
+    window.location.href = "/";
   }
 
   return (
