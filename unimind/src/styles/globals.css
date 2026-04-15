@@ -4,8 +4,65 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* Engineering-console palette */
+  --color-void: #07080a;
+  --color-panel: #0e1014;
+  --color-panel-hi: #141821;
+  --color-rule: #1c2029;
+  --color-rule-hi: #2a303d;
+  --color-fg: #dce1ea;
+  --color-fg-soft: #9aa3b2;
+  --color-fg-mute: #5a6474;
+
+  --color-phosphor: #7cff6b;   /* primary accent */
+  --color-cyan: #5cc8ff;       /* info */
+  --color-amber: #ffb86b;      /* warn */
+  --color-magenta: #ff6bd8;    /* tag */
+  --color-red: #ff5c5c;        /* error */
+}
+
+@layer base {
+  html, body {
+    background-color: var(--color-void);
+    color: var(--color-fg);
+  }
+  body {
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.018) 1px, transparent 1px),
+      radial-gradient(1200px 600px at 85% -10%, rgba(124,255,107,0.05), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(92,200,255,0.04), transparent 60%);
+    background-size: 32px 32px, 32px 32px, auto, auto;
+  }
+  ::selection {
+    background: var(--color-phosphor);
+    color: var(--color-void);
+  }
+}
+
+@keyframes term-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes term-scan {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes term-blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0; }
+}
+.term-rise { animation: term-rise 0.55s cubic-bezier(.2,.7,.2,1) both; }
+.term-scan { transform-origin: left; animation: term-scan 0.8s cubic-bezier(.2,.7,.2,1) both; }
+.term-caret::after {
+  content: "▊";
+  margin-left: 0.15em;
+  color: var(--color-phosphor);
+  animation: term-blink 1.1s steps(1,end) infinite;
 }
 
 @theme inline {

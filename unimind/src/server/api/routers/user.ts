@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 
 const CALIBRATION_THRESHOLD = 10;
 const TOPICS_COVERED_WINDOW_DAYS = 7;
 
 export const userRouter = createTRPCRouter({
+  count: publicProcedure.query(async ({ ctx }) => {
+    const count = await ctx.db.user.count();
+    return { count };
+  }),
+
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
@@ -23,21 +28,26 @@ export const userRouter = createTRPCRouter({
       }),
     ]);
 
-    const totalAnswers = userTopics.reduce((sum, t) => sum + t.totalCount, 0);
-    const topicsStarted = userTopics.length;
+    const weekAgo = new Date(
+      Date.now() - TOPICS_COVERED_WINDOW_DAYS * 86_400_000,
+    );
 
-    const weekAgo = new Date();
-    weekAgo.setUTCDate(weekAgo.getUTCDate() - TOPICS_COVERED_WINDOW_DAYS);
-    const topicsCoveredThisWeek = userTopics.filter(
-      (t) => t.lastAnsweredAt && t.lastAnsweredAt >= weekAgo,
-    ).length;
+    let totalAnswers = 0;
+    let scoreSum = 0;
+    let topicsCoveredThisWeek = 0;
+    for (const t of userTopics) {
+      totalAnswers += t.totalCount;
+      scoreSum += t.score;
+      if (t.lastAnsweredAt && t.lastAnsweredAt >= weekAgo) {
+        topicsCoveredThisWeek += 1;
+      }
+    }
+    const topicsStarted = userTopics.length;
 
     const accuracy =
       totalAnswers < CALIBRATION_THRESHOLD || topicsStarted === 0
         ? null
-        : Math.round(
-            userTopics.reduce((sum, t) => sum + t.score, 0) / topicsStarted,
-          );
+        : Math.round(scoreSum / topicsStarted);
 
     const topicMastery = [...userTopics]
       .sort((a, b) => b.score - a.score)

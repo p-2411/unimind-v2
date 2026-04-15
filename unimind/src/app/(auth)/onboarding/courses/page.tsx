@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "~/lib/supabase/server";
 import { db } from "~/server/db";
 import { api } from "~/trpc/server";
+import { AuthPane } from "~/components/auth-pane";
 import { CoursePicker } from "./course-picker";
 
 export default async function OnboardingCoursesPage() {
@@ -20,12 +21,12 @@ export default async function OnboardingCoursesPage() {
   const courses = await api.course.list();
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-2 text-2xl font-bold">Pick your courses</h1>
-      <p className="mb-6 text-sm text-gray-600">
-        Select at least one course to get started.
-      </p>
+    <AuthPane
+      eyebrow="Step 2 of 2"
+      title="Pick your courses."
+      subtitle="We'll seed your question set from these. You can change them later."
+    >
       <CoursePicker courses={courses} />
-    </div>
+    </AuthPane>
   );
 }

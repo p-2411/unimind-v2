@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
-  Home,
-  Inbox,
-  Calendar,
-  Search,
-  Settings,
+  BookOpenText,
+  LayoutGrid,
+  ListOrdered,
   LogOut,
+  Settings,
+  TrendingUp,
 } from "lucide-react";
+import { UnimindLogo } from "~/components/logo";
 import { useSupabase } from "~/components/providers/supabase-provider";
+import { cn } from "~/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -23,61 +27,80 @@ import {
 } from "~/components/ui/sidebar";
 
 const items = [
-  {
-    title: "Dashboard",
-    url: "#",
-    icon: Home,
-  },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
+  { title: "Dashboard", url: "/",          icon: LayoutGrid },
+  { title: "Questions", url: "/questions", icon: ListOrdered },
+  { title: "Topics",    url: "/topics",    icon: BookOpenText },
+  { title: "Progress",  url: "/progress",  icon: TrendingUp },
+  { title: "Settings",  url: "/settings",  icon: Settings },
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
   return (
-    <Sidebar>
+    <Sidebar className="border-r border-[color:var(--color-rule)] bg-[color:var(--color-void)]">
       <SidebarHeader>
-        <div className="px-2 py-4">
-          <h2 className="text-lg font-semibold">Unimind</h2>
+        <div className="flex items-center gap-2.5 px-3 pt-5 pb-3">
+          <UnimindLogo className="h-7 w-7 text-[color:var(--color-phosphor)]" />
+          <div className="leading-tight">
+            <div className="font-mono text-[15px] font-semibold tracking-tight text-[color:var(--color-fg)]">
+              Unimind
+            </div>
+            <div className="font-sans text-[10.5px] text-[color:var(--color-fg-mute)]">
+              CS practice
+            </div>
+          </div>
         </div>
+        <div className="mx-3 border-t border-[color:var(--color-rule)]" />
       </SidebarHeader>
-      <SidebarContent>
+
+      <SidebarContent className="pt-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
+            Menu
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const active =
+                  item.url === "/"
+                    ? pathname === "/"
+                    : pathname === item.url ||
+                      pathname?.startsWith(`${item.url}/`);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      className={cn(
+                        "group h-9 rounded-none border-l-2 pl-3 transition-colors",
+                        active
+                          ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-panel)] text-[color:var(--color-fg)]"
+                          : "border-transparent text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-fg)]",
+                      )}
+                    >
+                      <Link href={item.url} className="flex items-center gap-3">
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4",
+                            active && "text-[color:var(--color-phosphor)]",
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        <span className="font-sans text-[13.5px] tracking-tight">
+                          {item.title}
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
       <SidebarFooter>
+        <div className="mx-3 mb-2 border-t border-[color:var(--color-rule)]" />
         <SidebarMenu>
           <SidebarMenuItem>
             <SignOutButton />
@@ -97,8 +120,11 @@ function SignOutButton() {
   }
 
   return (
-    <SidebarMenuButton onClick={onSignOut}>
-      <LogOut />
+    <SidebarMenuButton
+      onClick={onSignOut}
+      className="h-9 rounded-none border-l-2 border-transparent pl-3 font-sans text-[13.5px] text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-red)]"
+    >
+      <LogOut className="h-4 w-4" strokeWidth={1.75} />
       <span>Sign out</span>
     </SidebarMenuButton>
   );
