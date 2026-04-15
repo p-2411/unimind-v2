@@ -6,8 +6,9 @@ import {
   Calendar,
   Search,
   Settings,
-  User,
+  LogOut,
 } from "lucide-react";
+import { useSupabase } from "~/components/providers/supabase-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -79,13 +80,26 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton>
-              <User />
-              <span>Account</span>
-            </SidebarMenuButton>
+            <SignOutButton />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function SignOutButton() {
+  const { supabase } = useSupabase();
+
+  async function onSignOut() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
+  return (
+    <SidebarMenuButton onClick={onSignOut}>
+      <LogOut />
+      <span>Sign out</span>
+    </SidebarMenuButton>
   );
 }
