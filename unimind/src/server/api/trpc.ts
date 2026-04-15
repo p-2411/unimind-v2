@@ -40,8 +40,16 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
       select: { id: true },
     });
     if (!existing) {
+      const fullName =
+        typeof user.user_metadata?.full_name === "string"
+          ? (user.user_metadata.full_name as string).trim() || null
+          : null;
       await db.user.create({
-        data: { id: user.id, email: user.email ?? "" },
+        data: {
+          id: user.id,
+          email: user.email ?? "",
+          name: fullName,
+        },
       });
     }
     session = { user: { id: user.id, email: user.email ?? "" } };
