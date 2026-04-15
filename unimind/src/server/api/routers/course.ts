@@ -3,11 +3,22 @@ import { z } from "zod";
 import {
   createTRPCRouter,
   protectedProcedure,
-  publicProcedure,
 } from "~/server/api/trpc";
 
-
 export const courseRouter = createTRPCRouter({
+  list: protectedProcedure.query(({ ctx }) =>
+    ctx.db.course.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        color: true,
+        icon: true,
+      },
+    }),
+  ),
+
   enroll: protectedProcedure
     .input(z.object({ courseId: z.string() }))
     .mutation(({ ctx, input }) =>
