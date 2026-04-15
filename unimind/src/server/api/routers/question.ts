@@ -8,6 +8,49 @@ import {
 } from "~/server/lib/scoring";
 
 export const questionRouter = createTRPCRouter({
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          topicId: z.string().optional(),
+          difficulty: z.number().int().min(1).max(3).optional(),
+          search: z.string().optional(),
+          limit: z.number().int().min(1).max(100).default(50),
+        })
+        .optional(),
+    )
+    .query(({ ctx, input }) => {
+      const { topicId, difficulty, search, limit = 50 } = input ?? {};
+      const trimmed = search?.trim();
+      return ctx.db.question.findMany({
+        where: {
+          ...(topicId ? { topicId } : {}),
+          ...(difficulty ? { difficulty } : {}),
+          ...(trimmed
+            ? {
+                OR: [
+                  { question: { contains: trimmed, mode: "insensitive" } },
+                  { topic: { name: { contains: trimmed, mode: "insensitive" } } },
+                  { subtopic: { name: { contains: trimmed, mode: "insensitive" } } },
+                ],
+              }
+            : {}),
+        },
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          question: true,
+          choices: true,
+          answerIndex: true,
+          explanation: true,
+          difficulty: true,
+          topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+          subtopic: { select: { id: true, name: true } },
+        },
+      });
+    }),
+
   answer: protectedProcedure
     .input(
       z.object({
