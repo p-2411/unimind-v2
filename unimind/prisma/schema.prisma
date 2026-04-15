@@ -110,7 +110,7 @@ model UserTopic {
     topicName String   @default("Untitled")
     userId    String   @db.Uuid
     topicId   String
-    score     Float    @default(0.0) // User's score in this topic
+    score     Int      @default(50) // 0-100, clamped. Updated via computeTopicScore().
     correctCount   Int       @default(0)
     totalCount     Int       @default(0)
     lastAnsweredAt DateTime?
