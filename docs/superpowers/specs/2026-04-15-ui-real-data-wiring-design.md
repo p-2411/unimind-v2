@@ -35,7 +35,8 @@
 
 - **`answer`** — already implemented, **extend** to:
   - Include `answerIndex` and `explanation` on the return so the client can reveal without a second fetch.
-  - Replace the inline `score = correctCount / totalCount` with a call to a new helper `computeTopicScore({ prevScore, isCorrect })` in `src/server/lib/scoring.ts`. Initial implementation: `prevScore + (isCorrect ? 1 : -1)`. Deliberately dumb — the helper is the single place to evolve later.
+  - Replace the inline `score = correctCount / totalCount` with a call to a new helper `computeTopicScore({ prevScore, isCorrect })` in `src/server/lib/scoring.ts`. Initial implementation: `clamp(prevScore + (isCorrect ? 1 : -1), 0, 100)`. Single replaceable function.
+  - When creating a new `UserTopic` row, seed `score = 50` (the `@default(50)` on the column).
 
 ### `userRouter` (`src/server/api/routers/user.ts`)
 
@@ -46,7 +47,8 @@
     {
       topicsStarted: number;          // count(UserTopic) for user
       topicsCoveredThisWeek: number;  // count(UserTopic where lastAnsweredAt >= now - 7d)
-      accuracy: number;               // sum(correctCount) / sum(totalCount), or 0 if no answers. Deliberately independent of UserTopic.score so changes to the scoring algorithm don't affect the Accuracy tile.
+      totalAnswers: number;           // sum(totalCount) across the user's UserTopic rows
+      accuracy: number | null;        // average(UserTopic.score), rounded; null if totalAnswers < 10 (calibration window)
       currentStreak: number;
       longestStreak: number;
       level: number;
@@ -61,7 +63,7 @@
     }
     ```
 
-All stats come from `UserTopic` + `UserStats`. No schema change required.
+Stats come from `UserTopic` + `UserStats`. **Schema change:** `UserTopic.score` becomes `Int @default(50)` (was `Float @default(0.0)`). Migration backfills existing rows to `50`.
 
 ## Client changes
 
@@ -71,10 +73,10 @@ All stats come from `UserTopic` + `UserStats`. No schema change required.
 - **5 stat tiles**: Topics started · Topics covered (7d) · Accuracy · Streak · Level.
   - `Topics started` → `topicsStarted`.
   - `Topics covered` → `topicsCoveredThisWeek`, subtitle "last 7 days".
-  - `Accuracy` → `Math.round(accuracy * 100)%`, subtitle shows raw correct/total sum across topics (or blank if none).
+  - `Accuracy` → if `accuracy === null` (i.e. `totalAnswers < 10`), show `Calibrating`, subtitle `${totalAnswers}/10 questions`. Otherwise show `${accuracy}%`, subtitle blank.
   - `Streak` → `currentStreak + "d"`, subtitle `Best ${longestStreak}d`.
   - `Level` → `L${level}`, subtitle `${xp} XP`.
-- Topic bars use `topicMastery` (top 6). Each bar: name, percentage, and a compact counter `${correctCount}/${totalCount}` below (or beside) the percentage.
+- Topic bars use `topicMastery` (top 6). Each bar: name, counter `${correctCount}/${totalCount}`, and — when `totalAnswers >= 10` — the percentage + filled bar. During calibration the bar stays empty and only the counter shows.
 - Delete the hardcoded fallback branch (lines 42–48). Render an empty state when `topicsStarted === 0`: "Answer a question to start tracking topic mastery."
 - Pass the question object to `<PreviewQuestion question={...} />` as a prop.
 
@@ -120,5 +122,6 @@ Dashboard (server component)
 
 - `question.forMe` fallback: user with zero `UserTopic` rows. Behaviour: pick a random `Question` across all topics; the dashboard tiles render an empty state anyway. Document this in the implementation.
 - `question.answer` is called twice if the seed-pick auto-trigger races with a user's manual Check on the same card. Guard: skip the auto-trigger when `revealed[seedId]` is already set (it is, from initial state derived from URL params).
-- Accuracy is `sum(correctCount)/sum(totalCount)` — decoupled from `UserTopic.score` so the scoring algorithm can change without touching the tile.
-- `question.forMe` picks the user's **highest-score** `UserTopic`. Since the initial scoring function is `+1/-1`, "highest score" correlates with "most net correct" — a reasonable proxy for "strongest topic" until the algorithm is replaced.
+- Accuracy = `average(UserTopic.score)` rounded, gated on `totalAnswers >= 10` (calibration window).
+- `UserTopic.score` is an int in `[0, 100]` seeded at `50`. Updated via `computeTopicScore` on every answer — all future algorithm swaps happen inside that function.
+- `question.forMe` picks the user's **highest-score** `UserTopic` (tie-break: oldest `lastAnsweredAt`). During calibration all topics sit at `50` or close to it, so results are effectively random — acceptable for a cold-start window.
