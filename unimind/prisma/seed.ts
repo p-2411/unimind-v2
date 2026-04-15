@@ -9,6 +9,7 @@ async function main() {
   // Clear existing data (in reverse order of dependencies)
   console.log("🗑️  Clearing existing data...");
   await prisma.question.deleteMany();
+  await prisma.subtopic.deleteMany();
   await prisma.userTopic.deleteMany();
   await prisma.topic.deleteMany();
   await prisma.assessment.deleteMany();
@@ -60,6 +61,20 @@ async function main() {
   }
   console.log(`   ✓ Created ${initialData.topics.length} topics`);
 
+  // Seed Subtopics
+  console.log("📑 Seeding subtopics...");
+  for (const subtopic of initialData.subtopics) {
+    await prisma.subtopic.create({
+      data: {
+        id: subtopic.id,
+        name: subtopic.name,
+        description: subtopic.description,
+        topicId: subtopic.topicId,
+      },
+    });
+  }
+  console.log(`   ✓ Created ${initialData.subtopics.length} subtopics`);
+
   // Seed Questions
   console.log("❓ Seeding questions...");
   for (const question of initialData.questions) {
@@ -72,6 +87,7 @@ async function main() {
         explanation: question.explanation,
         difficulty: question.difficulty,
         topicId: question.topicId,
+        subtopicId: question.subtopicId,
       },
     });
   }
