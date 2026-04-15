@@ -11,6 +11,7 @@ async function main() {
   await prisma.question.deleteMany();
   await prisma.subtopic.deleteMany();
   await prisma.userTopic.deleteMany();
+  await prisma.userCourse.deleteMany();
   await prisma.topic.deleteMany();
   await prisma.assessment.deleteMany();
   await prisma.userStats.deleteMany();
@@ -149,12 +150,10 @@ async function main() {
   // Seed Course Enrollments (many-to-many)
   console.log("🔗 Seeding course enrollments...");
   for (const enrollment of initialData.courseEnrollments) {
-    await prisma.user.update({
-      where: { id: enrollment.userId },
+    await prisma.userCourse.create({
       data: {
-        courses: {
-          connect: { id: enrollment.courseId },
-        },
+        userId: enrollment.userId,
+        courseId: enrollment.courseId,
       },
     });
   }
