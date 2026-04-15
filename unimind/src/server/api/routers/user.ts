@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const CALIBRATION_THRESHOLD = 10;
@@ -62,4 +63,17 @@ export const userRouter = createTRPCRouter({
       calibrationThreshold: CALIBRATION_THRESHOLD,
     };
   }),
+
+  enrollCourses: protectedProcedure
+    .input(z.object({ courseIds: z.array(z.string()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.userCourse.createMany({
+        data: input.courseIds.map((courseId) => ({
+          userId: ctx.session.user.id,
+          courseId,
+        })),
+        skipDuplicates: true,
+      });
+      return { count: result.count };
+    }),
 });
