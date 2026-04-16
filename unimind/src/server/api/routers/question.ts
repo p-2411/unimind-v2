@@ -24,8 +24,14 @@ export const questionRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       const { topicId, difficulty, search, limit = 50 } = input ?? {};
       const trimmed = search?.trim();
+      const userId = ctx.session.user.id;
       return ctx.db.question.findMany({
         where: {
+          topic: {
+            course: {
+              userCourses: { some: { userId } },
+            },
+          },
           ...(topicId ? { topicId } : {}),
           ...(difficulty ? { difficulty } : {}),
           ...(trimmed
