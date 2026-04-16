@@ -14,7 +14,7 @@ export default async function OnboardingCoursesPage() {
   if (!user) redirect("/login");
 
   const enrollmentCount = await db.userCourse.count({
-    where: { userId: user.id, isActive: true },
+    where: { userId: user.id },
   });
   if (enrollmentCount > 0) redirect("/");
 
