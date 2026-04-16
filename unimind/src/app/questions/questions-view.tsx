@@ -38,7 +38,7 @@ export function QuestionsView() {
 
   const topicChips = useMemo(() => {
     const list = topicsQuery.data ?? [];
-    return list.map((t) => ({ id: t.id, name: t.topicName }));
+    return list.map((t) => ({ id: t.id, name: t.name }));
   }, [topicsQuery.data]);
 
   const sorted = useMemo(() => {

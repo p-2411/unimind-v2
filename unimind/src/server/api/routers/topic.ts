@@ -1,18 +1,15 @@
-import { z } from "zod";
-
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
-
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const topicRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        return await ctx.db.userTopic.findMany({
-            where: {
-                userId: ctx.session.user.id,
-            },
-        });
+  getAll: protectedProcedure.query(({ ctx }) =>
+    ctx.db.topic.findMany({
+      where: {
+        course: {
+          userCourses: { some: { userId: ctx.session.user.id } },
+        },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
+  ),
 });
