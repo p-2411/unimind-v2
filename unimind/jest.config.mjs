@@ -4,7 +4,7 @@ export default {
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.test.ts"],
   transform: {
-    "^.+\\.(t|j)sx?$": [
+    "^.+\\.tsx?$": [
       "@swc/jest",
       {
         jsc: {
