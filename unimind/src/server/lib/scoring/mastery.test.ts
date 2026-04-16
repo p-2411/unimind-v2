@@ -44,7 +44,7 @@ describe("applyMastery", () => {
     expect(masteryScore).toBeCloseTo(70.25, 5);
   });
 
-  it("leaves a NEUTRAL score essentially unchanged on a single split outcome", () => {
+  it("blends a NEUTRAL score upward by ATTEMPT_WEIGHT on a correct answer", () => {
     const { masteryScore } = applyMastery({
       prevScore: NEUTRAL_SCORE,
       prevUpdatedAt: day(0),
@@ -54,6 +54,38 @@ describe("applyMastery", () => {
     // 0.15*100 + 0.85*50 = 57.5 (still close to neutral, ratio matches ATTEMPT_WEIGHT).
     const expected = ATTEMPT_WEIGHT * 100 + (1 - ATTEMPT_WEIGHT) * NEUTRAL_SCORE;
     expect(masteryScore).toBeCloseTo(expected, 5);
+  });
+
+  it("treats negative elapsed time as zero (no amplification on clock skew)", () => {
+    // now BEFORE prevUpdatedAt — should not amplify the score away from NEUTRAL.
+    const { masteryScore } = applyMastery({
+      prevScore: 90,
+      prevUpdatedAt: day(10),
+      isCorrect: true,
+      now: day(0),
+    });
+    // Negative elapsed clamped to 0: decayed = 90, next = 0.15*100 + 0.85*90 = 91.5.
+    expect(masteryScore).toBeCloseTo(91.5, 5);
+  });
+
+  it("clamps output to [0, 100] when prevScore is out of range", () => {
+    // Stale prevScore = 120 — output must not exceed 100.
+    const high = applyMastery({
+      prevScore: 120,
+      prevUpdatedAt: day(0),
+      isCorrect: true,
+      now: day(0),
+    });
+    expect(high.masteryScore).toBeLessThanOrEqual(100);
+
+    // Stale prevScore = -20 with incorrect — output must not go below 0.
+    const low = applyMastery({
+      prevScore: -20,
+      prevUpdatedAt: day(0),
+      isCorrect: false,
+      now: day(0),
+    });
+    expect(low.masteryScore).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -89,5 +121,14 @@ describe("readMastery", () => {
         now: day(365),
       }),
     ).toBeCloseTo(NEUTRAL_SCORE, 5);
+  });
+
+  it("clamps read output to [0, 100] when stored score is out of range", () => {
+    expect(
+      readMastery({ score: 150, updatedAt: day(0), now: day(0) }),
+    ).toBeLessThanOrEqual(100);
+    expect(
+      readMastery({ score: -10, updatedAt: day(0), now: day(0) }),
+    ).toBeGreaterThanOrEqual(0);
   });
 });

@@ -4,8 +4,10 @@ export const ATTEMPT_WEIGHT = 0.15;
 
 const MS_PER_DAY = 86_400_000;
 
+const clamp = (n: number) => Math.min(100, Math.max(0, n));
+
 function decayedTowardNeutral(score: number, elapsedDays: number) {
-  const decay = Math.pow(0.5, elapsedDays / HALF_LIFE_DAYS);
+  const decay = Math.pow(0.5, Math.max(0, elapsedDays) / HALF_LIFE_DAYS);
   return decay * score + (1 - decay) * NEUTRAL_SCORE;
 }
 
@@ -24,7 +26,7 @@ export function applyMastery({
   const decayed = decayedTowardNeutral(prevScore, elapsedDays);
   const outcome = isCorrect ? 100 : 0;
   const next = ATTEMPT_WEIGHT * outcome + (1 - ATTEMPT_WEIGHT) * decayed;
-  return { masteryScore: next, masteryUpdatedAt: now };
+  return { masteryScore: clamp(next), masteryUpdatedAt: now };
 }
 
 export function readMastery({
@@ -37,5 +39,5 @@ export function readMastery({
   now: Date;
 }): number {
   const elapsedDays = (now.getTime() - updatedAt.getTime()) / MS_PER_DAY;
-  return decayedTowardNeutral(score, elapsedDays);
+  return clamp(decayedTowardNeutral(score, elapsedDays));
 }
