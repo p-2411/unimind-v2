@@ -8,6 +8,8 @@ async function main() {
 
   // Clear existing data (in reverse order of dependencies)
   console.log("🗑️  Clearing existing data...");
+  await prisma.questionAttempt.deleteMany();
+  await prisma.userQuestion.deleteMany();
   await prisma.question.deleteMany();
   await prisma.subtopic.deleteMany();
   await prisma.userTopic.deleteMany();
@@ -141,7 +143,7 @@ async function main() {
         userId: userTopic.userId,
         topicId: userTopic.topicId,
         topicName: topicMap.get(userTopic.topicId) ?? "Untitled",
-        score: userTopic.score,
+        masteryScore: userTopic.score,
       },
     });
   }
