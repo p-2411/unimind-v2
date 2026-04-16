@@ -41,18 +41,18 @@ Next.js 15 App Router · TypeScript · tRPC v11 · Prisma · Supabase (Auth + Po
 3. Root `/` gates on enrollment count: 0 → redirect to onboarding; >0 → render dashboard. `/onboarding/courses` has the reverse gate.
 
 ### Data model (`unimind/prisma/schema.prisma`)
-Hierarchy: `Course` → `Topic` → `Subtopic` → `Question`. Per-user state: `UserCourse` (enrollments), `UserTopic` (mastery score 0–100 per topic, correct/total counts), `UserStats` (gamification: level, xp, streaks, totals). `Assessment` is a named dated event tied to a course.
+Hierarchy: `Course` → `Topic` → `Subtopic` → `Question`. Per-user state: `UserCourse` (enrollments — hard-deleted on unenroll), `UserTopic` (per-topic EMA mastery + counts), `UserQuestion` (per-`(user, question)` FSRS scheduler state, mirrors ts-fsrs `Card`), `QuestionAttempt` (append-only audit log of every answer), `UserStats` (gamification: level, xp, streaks, totals). `Assessment` is a named dated event tied to a course.
 
 `User.id` is a UUID matching `auth.users.id` — **no default**; it must be provided on create (done by `getOrCreateUserProfile` in the tRPC context). Most other IDs are cuid.
 
 ### tRPC routers (`src/server/api/routers/`)
 - `user` — `count` (public), `dashboardStats`, `enrollCourses`
-- `course` — `list`, `enroll`, `listMine`
-- `question` — `list` (filter/sort/search), `forMe` (weighted pick by lowest `UserTopic.score`), `answer` (interactive `$transaction` that updates `UserTopic` + `UserStats`)
+- `course` — `list`, `enroll`, `unenroll` (hard reset of all per-user state for the course), `listMine`
+- `question` — `list` (filter/sort/search), `forMe` and `nextForPaywall` (shared picker — `due ASC NULLS FIRST` over the user's enrolled-course questions), `answer` (interactive `$transaction` that updates `UserQuestion` FSRS state, appends `QuestionAttempt`, EMA-updates `UserTopic`, and updates `UserStats`)
 - `topic` — `getAll`
 - `assessment` — empty placeholder
 
-Mastery scoring in `src/server/lib/scoring.ts`: `computeTopicScore({ prevScore, isCorrect })` is a simple ±1 clamp 0–100, seeded at `INITIAL_TOPIC_SCORE = 50`.
+Scoring in `src/server/lib/scoring/`: `mastery.ts` is the per-topic EMA (15-day half-life, decays toward 50; `applyMastery` on write, `readMastery` on read). `scheduler.ts` is a thin adapter over the `ts-fsrs` package — we persist `Card` fields directly on `UserQuestion` and never reimplement FSRS math. `picker.ts` is the shared raw-SQL "next due card" query used by `forMe` and `nextForPaywall`.
 
 ### UI
 Distinctive engineering-console theme — dark background, phosphor green / cyan / amber / magenta accents, Geist sans + JetBrains Mono, glassmorphism, custom keyframes (`term-rise`, `term-scan`, `term-blink`) defined in `src/styles/globals.css` via Tailwind v4 `@theme`. The sidebar (`src/components/app-sidebar.tsx`) wraps most app routes via `SidebarProvider` / `SidebarInset`.
@@ -72,4 +72,5 @@ Do **not** switch back to port `6543` without first refactoring `question.answer
 - Brainstorm specs live in `docs/superpowers/specs/YYYY-MM-DD-*.md`.
 - Implementation plans live in `docs/superpowers/plans/YYYY-MM-DD-*.md`.
 - Commits follow Conventional Commits (`feat(scope):`, `fix(scope):`, `docs(…):`, `chore(…):`). Recent history is a good reference.
+- Git workflow: one branch per large feature (e.g. implementing a new feature end-to-end). Within that branch, make a separate commit for each individual change — a button added, a bug fixed, a small update — rather than one large bundled commit. Related changes belonging to the same feature stay together on the branch but remain split across granular commits.
 - The team uses subagent-driven development for plan execution; follow the existing plan format when writing new ones (checkbox steps, exact file paths, concrete code, one commit per task).
