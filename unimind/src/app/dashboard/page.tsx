@@ -131,7 +131,7 @@ export default async function Dashboard() {
 
         <section className="mt-8 grid grid-cols-12 gap-4">
           <div className="col-span-12 min-w-0 lg:col-span-5">
-            <SectionHead title="Topic mastery" hint="30 days" />
+            <SectionHead title="Topic Mastery" hint="30 days" />
             <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
               {stats.topicMastery.length === 0 ? (
                 <div className="p-6 text-center font-sans text-[13px] text-[color:var(--color-fg-mute)]">
