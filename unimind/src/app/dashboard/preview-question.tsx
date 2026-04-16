@@ -6,9 +6,9 @@ import { ArrowRight } from "lucide-react";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { difficultyLabel } from "~/lib/question-display";
 
-type DailyQuestion = NonNullable<RouterOutputs["question"]["forMe"]>;
+type NextQuestion = NonNullable<RouterOutputs["question"]["forMe"]>;
 
-export function PreviewQuestion({ question: q }: { question: DailyQuestion }) {
+export function PreviewQuestion({ question: q }: { question: NextQuestion }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number | null>(null);
   const letters = ["A", "B", "C", "D", "E", "F"];

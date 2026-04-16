@@ -20,7 +20,7 @@ const QUOTES = [
 ];
 
 export default async function Dashboard() {
-  const [stats, dailyQuestion] = await Promise.all([
+  const [stats, nextQuestion] = await Promise.all([
     api.user.dashboardStats(),
     api.question.forMe(),
   ]);
@@ -179,10 +179,10 @@ export default async function Dashboard() {
           </div>
 
           <div className="col-span-12 min-w-0 lg:col-span-7">
-            <SectionHead title="Daily prompt" />
+            <SectionHead title="First Up" />
             <div className="mt-3">
-              {dailyQuestion ? (
-                <PreviewQuestion question={dailyQuestion} />
+              {nextQuestion ? (
+                <PreviewQuestion question={nextQuestion} />
               ) : (
                 <div className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
                   No questions available yet.
