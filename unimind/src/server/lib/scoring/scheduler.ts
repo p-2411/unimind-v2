@@ -2,15 +2,15 @@ import {
   fsrs,
   createEmptyCard,
   type Card,
+  type Grade,
   type RecordLogItem,
-  type Rating,
 } from "ts-fsrs";
 
 const f = fsrs(); // default parameters: enable_fuzz=true, enable_short_term=false
 
 export type SchedulerInput = {
   prevCard: Card | null;
-  rating: Rating;
+  rating: Grade; // 1=Again, 2=Hard, 3=Good, 4=Easy (excludes Manual=0)
   now: Date;
 };
 
@@ -19,6 +19,6 @@ export function applyAnswer({
   rating,
   now,
 }: SchedulerInput): RecordLogItem {
-  const card = prevCard ?? createEmptyCard(now);
+  const card: Card = prevCard ?? createEmptyCard<Card>(now);
   return f.next(card, now, rating);
 }
