@@ -150,7 +150,7 @@ export const questionRouter = createTRPCRouter({
           : null;
 
         // 2. Run scheduler.
-        const { card, log: _log } = applyAnswer({
+        const { card } = applyAnswer({
           prevCard,
           rating: input.rating as Grade,
           now,
