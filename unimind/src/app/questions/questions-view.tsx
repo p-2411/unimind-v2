@@ -62,8 +62,11 @@ export function QuestionsView() {
     const choice = Number(seedPick);
     if (Number.isNaN(choice)) return;
     setPicks((p) => ({ ...p, [seedId]: choice }));
+    // Find the question to derive rating from correctness.
+    const seedQ = (questionsQuery.data ?? []).find((x) => x.id === seedId);
+    const rating = seedQ && choice === seedQ.answerIndex ? 3 : 1;
     answer.mutate(
-      { questionId: seedId, choiceIndex: choice },
+      { questionId: seedId, choiceIndex: choice, rating, source: "in_app" },
       {
         onSuccess: (res) => {
           setResults((r) => ({
@@ -83,8 +86,9 @@ export function QuestionsView() {
   function handleCheck(q: Question) {
     const choice = picks[q.id];
     if (choice === undefined || results[q.id] || answer.isPending) return;
+    const rating = choice === q.answerIndex ? 3 : 1;
     answer.mutate(
-      { questionId: q.id, choiceIndex: choice },
+      { questionId: q.id, choiceIndex: choice, rating, source: "in_app" },
       {
         onSuccess: (res) => {
           setResults((r) => ({

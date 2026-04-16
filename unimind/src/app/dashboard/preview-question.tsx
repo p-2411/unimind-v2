@@ -26,7 +26,14 @@ export function PreviewQuestion({ question: q }: { question: DailyQuestion }) {
 
   function handleSubmit() {
     if (selected === null || answer.isPending) return;
-    answer.mutate({ questionId: q.id, choiceIndex: selected });
+    // Binary rating until the 4-grade self-rate UI lands: Good for correct, Again for wrong.
+    const rating = selected === q.answerIndex ? 3 : 1;
+    answer.mutate({
+      questionId: q.id,
+      choiceIndex: selected,
+      rating,
+      source: "in_app",
+    });
   }
 
   return (
