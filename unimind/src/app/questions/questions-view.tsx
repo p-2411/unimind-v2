@@ -55,16 +55,18 @@ export function QuestionsView() {
     return list;
   }, [questionsQuery.data, sort, seedId]);
 
-  // Auto-submit the seed pick once on mount
+  // Auto-submit the seed pick once the questions list has loaded
   useEffect(() => {
     if (!seedId || seedPick === null) return;
     if (results[seedId]) return;
+    if (!questionsQuery.isSuccess) return;
     const choice = Number(seedPick);
     if (Number.isNaN(choice)) return;
+    // Bail out if the seed question isn't in the loaded list yet
+    const seedQ = questionsQuery.data.find((x) => x.id === seedId);
+    if (!seedQ) return;
     setPicks((p) => ({ ...p, [seedId]: choice }));
-    // Find the question to derive rating from correctness.
-    const seedQ = (questionsQuery.data ?? []).find((x) => x.id === seedId);
-    const rating = seedQ && choice === seedQ.answerIndex ? 3 : 1;
+    const rating = choice === seedQ.answerIndex ? 3 : 1;
     answer.mutate(
       { questionId: seedId, choiceIndex: choice, rating, source: "in_app" },
       {
@@ -81,7 +83,7 @@ export function QuestionsView() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedId, seedPick]);
+  }, [seedId, seedPick, questionsQuery.isSuccess]);
 
   function handleCheck(q: Question) {
     const choice = picks[q.id];
