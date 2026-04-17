@@ -12,6 +12,9 @@ import {
   xpForAnswer,
   levelForXp,
   updateStreak,
+  evaluateAchievement,
+  ALL_ACHIEVEMENT_CODES,
+  type AchievementContext,
 } from "~/server/lib/gamification";
 
 export const questionRouter = createTRPCRouter({
@@ -303,17 +306,92 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
+        // 7. Achievement evaluation. Build a post-answer context snapshot,
+        // evaluate every registered predicate, and insert UserAchievement rows
+        // for previously-unearned codes. Earned XP rewards are summed and
+        // applied in a single stats patch below.
+        const [
+          topicAggregates,
+          distinctTopicsCount,
+          distinctCoursesCount,
+          totalAnswersAgg,
+          alreadyEarned,
+        ] = await Promise.all([
+          tx.userTopic.findMany({
+            where: { userId },
+            select: { masteryScore: true },
+          }),
+          tx.userTopic.count({ where: { userId } }),
+          tx.userCourse.count({ where: { userId } }),
+          tx.userStats.findUnique({
+            where: { userId },
+            select: { totalCorrectAnswers: true, totalQuestionsAnswered: true },
+          }),
+          tx.userAchievement.findMany({
+            where: { userId },
+            select: { achievement: { select: { code: true } } },
+          }),
+        ]);
+
+        const ctxForAchievements: AchievementContext = {
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+          totalCorrectAnswers: totalAnswersAgg?.totalCorrectAnswers ?? 0,
+          totalQuestionsAnswered: totalAnswersAgg?.totalQuestionsAnswered ?? 0,
+          level: newLevel,
+          topicsWithMastery70: topicAggregates.filter((t) => t.masteryScore >= 70).length,
+          topicsWithMastery85: topicAggregates.filter((t) => t.masteryScore >= 85).length,
+          distinctTopicsPracticed: distinctTopicsCount,
+          distinctCoursesPracticed: distinctCoursesCount,
+          justAnsweredDifficulty: question.difficulty,
+          justAnsweredCorrectly: isCorrect,
+          hasAnsweredAnyQuestion: (totalAnswersAgg?.totalQuestionsAnswered ?? 0) > 0,
+        };
+
+        const earnedCodes = new Set(alreadyEarned.map((r) => r.achievement.code));
+        const newlyEarnedCodes: string[] = [];
+        let bonusXp = 0;
+
+        for (const code of ALL_ACHIEVEMENT_CODES) {
+          if (earnedCodes.has(code)) continue;
+          if (!evaluateAchievement(code, ctxForAchievements)) continue;
+          const row = await tx.achievement.findUnique({
+            where: { code },
+            select: { id: true, xpReward: true },
+          });
+          if (!row) continue;
+          await tx.userAchievement.create({
+            data: { userId, achievementId: row.id },
+          });
+          newlyEarnedCodes.push(code);
+          bonusXp += row.xpReward;
+        }
+
+        let finalXp = newXp;
+        let finalLevel = newLevel;
+        let finalLeveledUp = leveledUp;
+        if (bonusXp > 0) {
+          finalXp = newXp + bonusXp;
+          finalLevel = levelForXp(finalXp);
+          finalLeveledUp = finalLevel > (existingStats?.level ?? 1);
+          await tx.userStats.update({
+            where: { userId },
+            data: { xp: finalXp, level: finalLevel },
+          });
+        }
+
         return {
           userTopic,
           nextDue: card.due,
-          xpDelta,
-          newXp,
-          newLevel,
-          leveledUp,
+          xpDelta: xpDelta + bonusXp,
+          newXp: finalXp,
+          newLevel: finalLevel,
+          leveledUp: finalLeveledUp,
           streakExtended: streak.streakExtended,
           streakLost: streak.streakLost,
           currentStreak: streak.currentStreak,
           longestStreak: streak.longestStreak,
+          newlyEarnedCodes,
         };
       });
 
@@ -331,6 +409,7 @@ export const questionRouter = createTRPCRouter({
         streakLost: result.streakLost,
         currentStreak: result.currentStreak,
         longestStreak: result.longestStreak,
+        newlyEarnedCodes: result.newlyEarnedCodes,
       };
     }),
 });
