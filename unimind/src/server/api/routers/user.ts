@@ -77,14 +77,13 @@ export const userRouter = createTRPCRouter({
       .sort((a, b) => b.score - a.score)
       .slice(0, 6);
 
-    const [allAchievements, earnedRows, distinctCoursesCount] = await Promise.all([
+    const [allAchievements, allEarnedRows, distinctCoursesCount] = await Promise.all([
       ctx.db.achievement.findMany({
         orderBy: [{ category: "asc" }, { tier: "asc" }, { code: "asc" }],
       }),
       ctx.db.userAchievement.findMany({
         where: { userId },
         orderBy: { earnedAt: "desc" },
-        take: 3,
         include: {
           achievement: {
             select: { id: true, code: true, name: true, description: true, iconKey: true, xpReward: true },
@@ -94,11 +93,7 @@ export const userRouter = createTRPCRouter({
       ctx.db.userCourse.count({ where: { userId } }),
     ]);
 
-    const earnedIdSet = new Set(
-      await ctx.db.userAchievement
-        .findMany({ where: { userId }, select: { achievementId: true } })
-        .then((rs) => rs.map((r) => r.achievementId)),
-    );
+    const earnedIdSet = new Set(allEarnedRows.map((r) => r.achievementId));
 
     const snapshot: AchievementContext = {
       currentStreak: userStats?.currentStreak ?? 0,
@@ -132,7 +127,7 @@ export const userRouter = createTRPCRouter({
       .sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))
       .slice(0, 3);
 
-    const recentEarned = earnedRows.map((r) => ({
+    const recentEarned = allEarnedRows.slice(0, 3).map((r) => ({
       achievement: r.achievement,
       earnedAt: r.earnedAt,
     }));
