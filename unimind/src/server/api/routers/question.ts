@@ -279,7 +279,6 @@ export const questionRouter = createTRPCRouter({
           currentStreak: existingStats?.currentStreak ?? 0,
           longestStreak: existingStats?.longestStreak ?? 0,
           lastActiveDate: existingStats?.lastActiveDate ?? null,
-          isCorrect,
           today,
         });
 

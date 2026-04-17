@@ -1,12 +1,14 @@
 /**
- * Pure streak transition. Rules (spec 2026-04-17-gamification-design.md):
+ * Pure streak transition.
  *
- * - A streak day is a UTC calendar day with at least one CORRECT answer.
- * - Correct answer the same UTC day as lastActiveDate: no change.
- * - Correct answer the UTC day after lastActiveDate: currentStreak += 1.
- * - Correct answer >1 UTC day after lastActiveDate: currentStreak = 1, streakLost = true.
- *   The previous streak value is preserved in longestStreak if it was the max.
- * - Incorrect answer: no change.
+ * A streak day is any UTC calendar day the user answered at least one question
+ * (correct or not). Rules:
+ *
+ * - Answer the same UTC day as lastActiveDate: no change.
+ * - Answer the UTC day after lastActiveDate: currentStreak += 1.
+ * - Answer >1 UTC day after lastActiveDate: currentStreak = 1, streakLost = true
+ *   iff the prior streak was positive. The previous streak value is preserved
+ *   in longestStreak if it was the max.
  * - longestStreak is updated whenever currentStreak reaches a new max.
  */
 
@@ -14,7 +16,6 @@ export type StreakInput = {
   currentStreak: number;
   longestStreak: number;
   lastActiveDate: Date | null;
-  isCorrect: boolean;
   today: Date; // caller supplies UTC day boundary (midnight UTC)
 };
 
@@ -34,19 +35,9 @@ function utcDaysBetween(a: Date, b: Date): number {
 }
 
 export function updateStreak(input: StreakInput): StreakResult {
-  const { currentStreak, longestStreak, lastActiveDate, isCorrect, today } = input;
+  const { currentStreak, longestStreak, lastActiveDate, today } = input;
 
-  if (!isCorrect) {
-    return {
-      currentStreak,
-      longestStreak,
-      lastActiveDate: lastActiveDate ?? today,
-      streakExtended: false,
-      streakLost: false,
-    };
-  }
-
-  // First-ever correct answer.
+  // First-ever answer.
   if (lastActiveDate === null) {
     return {
       currentStreak: 1,
@@ -81,12 +72,12 @@ export function updateStreak(input: StreakInput): StreakResult {
     };
   }
 
-  // gap > 1 — streak broken. Preserve longest, restart at 1.
+  // gap > 1 — streak broken iff a streak actually existed.
   return {
     currentStreak: 1,
     longestStreak: Math.max(longestStreak, currentStreak),
     lastActiveDate: today,
     streakExtended: true,
-    streakLost: true,
+    streakLost: currentStreak > 0,
   };
 }
