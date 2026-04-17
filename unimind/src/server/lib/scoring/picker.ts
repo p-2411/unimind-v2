@@ -25,7 +25,7 @@ export async function pickNextQuestionId(
     LEFT JOIN "user_questions" uq
       ON uq."questionId" = q.id
      AND uq."userId" = ${userId}::uuid
-    ORDER BY uq."due" ASC NULLS FIRST
+    ORDER BY uq."due" ASC NULLS FIRST, q.id ASC
     LIMIT 1;
   `;
   return rows[0]?.id ?? null;
