@@ -15,6 +15,8 @@ import {
   evaluateAchievement,
   ALL_ACHIEVEMENT_CODES,
   type AchievementContext,
+  logAnalyticsEvent,
+  ANALYTICS_EVENTS,
 } from "~/server/lib/gamification";
 
 export const questionRouter = createTRPCRouter({
@@ -394,6 +396,47 @@ export const questionRouter = createTRPCRouter({
           newlyEarnedCodes,
         };
       });
+
+      // Best-effort analytics. Do not await (fire-and-forget).
+      void logAnalyticsEvent(ctx.db, {
+        userId,
+        eventType: ANALYTICS_EVENTS.PAYWALL_ANSWERED,
+        payload: {
+          isCorrect,
+          difficulty: question.difficulty,
+          xpGranted: result.xpDelta,
+          source: input.source,
+        },
+      });
+
+      if (result.streakExtended) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.STREAK_EXTENDED,
+          payload: { length: result.currentStreak },
+        });
+      }
+      if (result.streakLost) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.STREAK_LOST,
+          payload: { priorLongest: result.longestStreak },
+        });
+      }
+      if (result.leveledUp) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.LEVEL_UP,
+          payload: { toLevel: result.newLevel },
+        });
+      }
+      for (const code of result.newlyEarnedCodes) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.ACHIEVEMENT_EARNED,
+          payload: { code },
+        });
+      }
 
       return {
         isCorrect,
