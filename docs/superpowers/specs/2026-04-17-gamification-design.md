@@ -253,6 +253,8 @@ Cohort is "users with any `QuestionAttempt` in the last 7 days." Index `Question
 
 ### Paywall (Chrome extension)
 
+**Status:** the Chrome extension does not exist yet. The UI in this subsection is a forward-looking reference for when the extension is built. Phase 1 ships the backend such that the extension can, when it arrives, call the same tRPC procedures (`dashboardStats`, `user.weeklyPercentile`, `achievement.listForUser`) and render the strips below without further server work.
+
 Two small strips above the question (both optional, both skippable by user setting in Phase 2):
 
 1. **Streak status strip.**
