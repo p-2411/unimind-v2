@@ -8,6 +8,11 @@ import {
   applyMastery,
   pickNextQuestionId,
 } from "~/server/lib/scoring";
+import {
+  xpForAnswer,
+  levelForXp,
+  updateStreak,
+} from "~/server/lib/gamification";
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
@@ -123,6 +128,7 @@ export const questionRouter = createTRPCRouter({
           topicId: true,
           answerIndex: true,
           explanation: true,
+          difficulty: true,
           topic: { select: { name: true } },
         },
       });
@@ -244,7 +250,34 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        // 6. Update UserStats (unchanged from current logic).
+        // 6. Compute XP / level / streak from the existing UserStats row.
+        const existingStats = await tx.userStats.findUnique({
+          where: { userId },
+          select: {
+            xp: true,
+            level: true,
+            currentStreak: true,
+            longestStreak: true,
+            lastActiveDate: true,
+          },
+        });
+
+        const xpDelta = xpForAnswer({
+          isCorrect,
+          difficulty: question.difficulty,
+        });
+        const newXp = (existingStats?.xp ?? 0) + xpDelta;
+        const newLevel = levelForXp(newXp);
+        const leveledUp = newLevel > (existingStats?.level ?? 1);
+
+        const streak = updateStreak({
+          currentStreak: existingStats?.currentStreak ?? 0,
+          longestStreak: existingStats?.longestStreak ?? 0,
+          lastActiveDate: existingStats?.lastActiveDate ?? null,
+          isCorrect,
+          today,
+        });
+
         await tx.userStats.upsert({
           where: { userId },
           create: {
@@ -252,17 +285,36 @@ export const questionRouter = createTRPCRouter({
             totalQuestionsAnswered: 1,
             totalCorrectAnswers: isCorrect ? 1 : 0,
             totalTimeSpent: input.timeSpentMs,
-            lastActiveDate: today,
+            xp: xpDelta,
+            level: levelForXp(xpDelta),
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak,
+            lastActiveDate: streak.lastActiveDate,
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
             totalCorrectAnswers: { increment: isCorrect ? 1 : 0 },
             totalTimeSpent: { increment: input.timeSpentMs },
-            lastActiveDate: today,
+            xp: newXp,
+            level: newLevel,
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak,
+            lastActiveDate: streak.lastActiveDate,
           },
         });
 
-        return { userTopic, nextDue: card.due };
+        return {
+          userTopic,
+          nextDue: card.due,
+          xpDelta,
+          newXp,
+          newLevel,
+          leveledUp,
+          streakExtended: streak.streakExtended,
+          streakLost: streak.streakLost,
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+        };
       });
 
       return {
@@ -271,6 +323,14 @@ export const questionRouter = createTRPCRouter({
         explanation: question.explanation,
         userTopic: result.userTopic,
         nextDue: result.nextDue,
+        xpDelta: result.xpDelta,
+        newXp: result.newXp,
+        newLevel: result.newLevel,
+        leveledUp: result.leveledUp,
+        streakExtended: result.streakExtended,
+        streakLost: result.streakLost,
+        currentStreak: result.currentStreak,
+        longestStreak: result.longestStreak,
       };
     }),
 });
