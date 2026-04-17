@@ -99,4 +99,29 @@ export const userRouter = createTRPCRouter({
       });
       return { count: result.count };
     }),
+
+  weeklyPercentile: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+
+    const rows = await ctx.db.$queryRaw<{ userId: string; count: bigint }[]>`
+      SELECT "userId", COUNT(*)::bigint AS count
+      FROM "question_attempts"
+      WHERE "answeredAt" > ${weekAgo}
+      GROUP BY "userId";
+    `;
+
+    const cohortSize = rows.length;
+    if (cohortSize < 20) return null;
+
+    const userRow = rows.find((r) => r.userId === userId);
+    const userCount = userRow ? Number(userRow.count) : 0;
+
+    const belowOrEqual = rows.filter((r) => Number(r.count) <= userCount).length;
+    const percentile = Math.round((belowOrEqual / cohortSize) * 100);
+
+    if (percentile < 50) return null;
+
+    return { percentile, cohortSize };
+  }),
 });
