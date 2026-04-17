@@ -8,13 +8,27 @@ import { difficultyLabel } from "~/lib/question-display";
 
 type NextQuestion = NonNullable<RouterOutputs["question"]["forMe"]>;
 
+type AnswerFlash = {
+  xpDelta: number;
+  leveledUp: boolean;
+  newLevel: number;
+  earned: string[];
+};
+
 export function PreviewQuestion({ question: q }: { question: NextQuestion }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number | null>(null);
+  const [flash, setFlash] = useState<AnswerFlash | null>(null);
   const letters = ["A", "B", "C", "D", "E", "F"];
 
   const answer = api.question.answer.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setFlash({
+        xpDelta: result.xpDelta,
+        leveledUp: result.leveledUp,
+        newLevel: result.newLevel,
+        earned: result.newlyEarnedCodes,
+      });
       if (selected === null) return;
       const params = new URLSearchParams({
         seed: q.id,
@@ -117,6 +131,19 @@ export function PreviewQuestion({ question: q }: { question: NextQuestion }) {
           <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
         </button>
       </div>
+      {flash && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-3 py-2 font-mono text-[11px] uppercase tracking-[0.2em]">
+          <span className="text-[color:var(--color-phosphor)]">+{flash.xpDelta} XP</span>
+          {flash.leveledUp && (
+            <span className="text-[color:var(--color-amber)]">Level {flash.newLevel} ↑</span>
+          )}
+          {flash.earned.map((code) => (
+            <span key={code} className="text-[color:var(--color-cyan)]">
+              🏅 {code}
+            </span>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
