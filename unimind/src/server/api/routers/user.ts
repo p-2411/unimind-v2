@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import { readMastery } from "~/server/lib/scoring";
 
 const CALIBRATION_THRESHOLD = 10;
 const TOPICS_COVERED_WINDOW_DAYS = 7;
@@ -20,7 +21,8 @@ export const userRouter = createTRPCRouter({
         select: {
           topicId: true,
           topicName: true,
-          score: true,
+          masteryScore: true,
+          masteryUpdatedAt: true,
           correctCount: true,
           totalCount: true,
           lastAnsweredAt: true,
@@ -32,12 +34,17 @@ export const userRouter = createTRPCRouter({
       Date.now() - TOPICS_COVERED_WINDOW_DAYS * 86_400_000,
     );
 
+    const now = new Date();
     let totalAnswers = 0;
     let scoreSum = 0;
     let topicsCoveredThisWeek = 0;
     for (const t of userTopics) {
       totalAnswers += t.totalCount;
-      scoreSum += t.score;
+      scoreSum += readMastery({
+        score: t.masteryScore,
+        updatedAt: t.masteryUpdatedAt,
+        now,
+      });
       if (t.lastAnsweredAt && t.lastAnsweredAt >= weekAgo) {
         topicsCoveredThisWeek += 1;
       }
@@ -49,16 +56,22 @@ export const userRouter = createTRPCRouter({
         ? null
         : Math.round(scoreSum / topicsStarted);
 
-    const topicMastery = [...userTopics]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
+    const topicMastery = userTopics
       .map((t) => ({
         topicId: t.topicId,
         name: t.topicName,
-        score: t.score,
+        score: Math.round(
+          readMastery({
+            score: t.masteryScore,
+            updatedAt: t.masteryUpdatedAt,
+            now,
+          }),
+        ),
         correctCount: t.correctCount,
         totalCount: t.totalCount,
-      }));
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
 
     return {
       topicsStarted,

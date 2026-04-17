@@ -38,7 +38,7 @@ export function QuestionsView() {
 
   const topicChips = useMemo(() => {
     const list = topicsQuery.data ?? [];
-    return list.map((t) => ({ id: t.id, name: t.topicName }));
+    return list.map((t) => ({ id: t.id, name: t.name }));
   }, [topicsQuery.data]);
 
   const sorted = useMemo(() => {
@@ -55,15 +55,20 @@ export function QuestionsView() {
     return list;
   }, [questionsQuery.data, sort, seedId]);
 
-  // Auto-submit the seed pick once on mount
+  // Auto-submit the seed pick once the questions list has loaded
   useEffect(() => {
     if (!seedId || seedPick === null) return;
     if (results[seedId]) return;
+    if (!questionsQuery.isSuccess) return;
     const choice = Number(seedPick);
     if (Number.isNaN(choice)) return;
+    // Bail out if the seed question isn't in the loaded list yet
+    const seedQ = questionsQuery.data.find((x) => x.id === seedId);
+    if (!seedQ) return;
     setPicks((p) => ({ ...p, [seedId]: choice }));
+    const rating = choice === seedQ.answerIndex ? 3 : 1;
     answer.mutate(
-      { questionId: seedId, choiceIndex: choice },
+      { questionId: seedId, choiceIndex: choice, rating, source: "in_app" },
       {
         onSuccess: (res) => {
           setResults((r) => ({
@@ -78,13 +83,14 @@ export function QuestionsView() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedId, seedPick]);
+  }, [seedId, seedPick, questionsQuery.isSuccess]);
 
   function handleCheck(q: Question) {
     const choice = picks[q.id];
     if (choice === undefined || results[q.id] || answer.isPending) return;
+    const rating = choice === q.answerIndex ? 3 : 1;
     answer.mutate(
-      { questionId: q.id, choiceIndex: choice },
+      { questionId: q.id, choiceIndex: choice, rating, source: "in_app" },
       {
         onSuccess: (res) => {
           setResults((r) => ({

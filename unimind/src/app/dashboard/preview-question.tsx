@@ -6,9 +6,9 @@ import { ArrowRight } from "lucide-react";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { difficultyLabel } from "~/lib/question-display";
 
-type DailyQuestion = NonNullable<RouterOutputs["question"]["forMe"]>;
+type NextQuestion = NonNullable<RouterOutputs["question"]["forMe"]>;
 
-export function PreviewQuestion({ question: q }: { question: DailyQuestion }) {
+export function PreviewQuestion({ question: q }: { question: NextQuestion }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number | null>(null);
   const letters = ["A", "B", "C", "D", "E", "F"];
@@ -26,7 +26,14 @@ export function PreviewQuestion({ question: q }: { question: DailyQuestion }) {
 
   function handleSubmit() {
     if (selected === null || answer.isPending) return;
-    answer.mutate({ questionId: q.id, choiceIndex: selected });
+    // Binary rating until the 4-grade self-rate UI lands: Good for correct, Again for wrong.
+    const rating = selected === q.answerIndex ? 3 : 1;
+    answer.mutate({
+      questionId: q.id,
+      choiceIndex: selected,
+      rating,
+      source: "in_app",
+    });
   }
 
   return (
