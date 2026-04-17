@@ -31,6 +31,9 @@ model User {
   questions   UserQuestion[]
   attempts    QuestionAttempt[]
 
+  achievements UserAchievement[]
+  events       AnalyticsEvent[]
+
   @@map("users")
 }
 
@@ -286,4 +289,52 @@ model Assessment {
   @@index([courseId])
   @@index([date])
   @@map("assessments")
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+model Achievement {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  description String
+  category    String
+  tier        Int     @default(1)
+  xpReward    Int     @default(0)
+  iconKey     String?
+
+  userAchievements UserAchievement[]
+
+  @@index([category, tier])
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String   @db.Uuid
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId, earnedAt])
+  @@map("user_achievements")
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String?  @db.Uuid
+  eventType  String
+  payload    Json?
+  occurredAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@map("analytics_events")
 }
