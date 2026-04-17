@@ -11,7 +11,15 @@ const LETTERS = ["A", "B", "C", "D", "E", "F"];
 type SortKey = "Recent" | "Difficulty" | "Topic";
 
 type Question = RouterOutputs["question"]["list"][number];
-type AnswerResult = { isCorrect: boolean; answerIndex: number; explanation: string | null };
+type AnswerResult = {
+  isCorrect: boolean;
+  answerIndex: number;
+  explanation: string | null;
+  xpDelta: number;
+  leveledUp: boolean;
+  newLevel: number;
+  newlyEarnedCodes: string[];
+};
 
 export function QuestionsView() {
   const search = useSearchParams();
@@ -77,6 +85,10 @@ export function QuestionsView() {
               isCorrect: res.isCorrect,
               answerIndex: res.answerIndex,
               explanation: res.explanation,
+              xpDelta: res.xpDelta,
+              leveledUp: res.leveledUp,
+              newLevel: res.newLevel,
+              newlyEarnedCodes: res.newlyEarnedCodes,
             },
           }));
         },
@@ -99,6 +111,10 @@ export function QuestionsView() {
               isCorrect: res.isCorrect,
               answerIndex: res.answerIndex,
               explanation: res.explanation,
+              xpDelta: res.xpDelta,
+              leveledUp: res.leveledUp,
+              newLevel: res.newLevel,
+              newlyEarnedCodes: res.newlyEarnedCodes,
             },
           }));
         },
@@ -400,6 +416,21 @@ function QuestionCard({
                 {result.explanation}
               </p>
             )}
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.2em]">
+              <span className="text-[color:var(--color-phosphor)]">
+                +{result!.xpDelta} XP
+              </span>
+              {result!.leveledUp && (
+                <span className="text-[color:var(--color-amber)]">
+                  Level {result!.newLevel} ↑
+                </span>
+              )}
+              {result!.newlyEarnedCodes.map((code) => (
+                <span key={code} className="text-[color:var(--color-cyan)]">
+                  🏅 {code}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
