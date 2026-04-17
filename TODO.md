@@ -1,6 +1,7 @@
 # TODO
 [] Account/settings page
-[] 
+[] Report feature on questions
+
 ## Database connection / scaling
 
 Currently running on a **direct** Supabase connection (port 5432). Fine for dev and pre-launch. Before launch or when concurrent users grow, revisit:
