@@ -270,9 +270,25 @@ Below the question, post-answer:
 ### Dashboard
 
 - Hero row: `Streak N · Level M (X / Y XP)`.
-- Achievements rail: last 3 earned + next-closest 3.
+- Achievements rail: last 3 earned + next-closest 3. Rail links to `/achievements`.
 - Percentile line (if eligible).
 - Existing topic-mastery panel unchanged.
+
+### Achievements page (`/achievements`)
+
+Full gallery, reachable from the dashboard rail's "View all" link.
+
+- **Header:** `12 / 40 unlocked · 280 XP from achievements`. Collection-progress anchoring at a glance.
+- **Filters:** category tabs (All / Streak / Volume / Mastery / Breadth / Meta) plus a "Locked only" toggle.
+- **Tiles:**
+  - *Earned:* full-color icon, name, description, earned date, XP awarded.
+  - *Locked:* muted icon, name + description still visible, progress bar when the predicate is countable (e.g. `73 / 100 questions answered`), XP reward previewed.
+
+**Show locked names/descriptions (don't `???` them).** The achievements system earns its keep through the goal-gradient effect — users accelerate as they approach a visible target. A curiosity gap is a weaker motivator than a known goal. Hidden achievements are reserved for a small set of meta / easter-egg codes (flagged by an `isHidden` column on `Achievement` if we decide to add any later; out of scope for Phase 1).
+
+**Progress bars apply only to countable predicates.** Combinatorial achievements ("3-day streak across 5 courses") render as binary locked/unlocked with the description as the only guide.
+
+**Paywall stays browse-free.** The 10-second choke-point surface only ever shows earn-pops; users who want to browse come to the dashboard.
 
 ## Rollout
 
@@ -309,5 +325,6 @@ Below the question, post-answer:
 - Streak rollover uses UTC day boundaries (matches the existing `lastActiveDate: today` pattern in `question.answer`). Users near the UTC midnight will see rollover at unusual local times; acceptable tradeoff pre-launch.
 - Achievement evaluation runs after the `UserStats` update in the same transaction. A lookup table mapping `code` → predicate (implemented in server code, not SQL) evaluates each achievement against the post-update state; new `UserAchievement` rows are written only for first-time earns (`@@unique([userId, achievementId])` protects against double-writes).
 - Anonymous-percentile queries should be served by a dedicated tRPC procedure (`user.weeklyPercentile`) and aggressively cacheable (e.g. `staleTime: 5 * 60 * 1000`). At scale, promote to a materialized weekly snapshot.
+- `/achievements` page data comes from a new `achievement.listForUser` procedure returning `{ earned: Array<{ achievement, earnedAt }>, locked: Array<{ achievement, progress: number | null }> }`. The same predicate functions that drive unlock evaluation in `question.answer` are reused here in a "how close?" mode that returns a 0–1 progress value (or `null` for combinatorial predicates). Centralise predicates in `src/server/lib/gamification/achievements.ts` so the two call sites cannot drift.
 - `AnalyticsEvent` writes should be best-effort and non-blocking (separate write, swallow errors) — they must not fail an answer.
 - Phase 1 table names avoid conflict with planned Phase 2 tables (`Friendship`, `League*`, `Group*`, `GroupMember`).
