@@ -146,6 +146,16 @@ export const questionRouter = createTRPCRouter({
       const today = new Date(now);
       today.setUTCHours(0, 0, 0, 0);
 
+      // Static catalog — pre-fetch outside the transaction so the unlock
+      // loop avoids N serial round-trips over the remote pooler.
+      const achievementCatalog = await ctx.db.achievement.findMany({
+        where: { code: { in: [...ALL_ACHIEVEMENT_CODES] } },
+        select: { id: true, code: true, xpReward: true },
+      });
+      const catalogByCode = new Map(
+        achievementCatalog.map((a) => [a.code, { id: a.id, xpReward: a.xpReward }]),
+      );
+
       const result = await ctx.db.$transaction(async (tx) => {
         // 1. Load existing UserQuestion (or null = unseen).
         const existingUq = await tx.userQuestion.findUnique({
@@ -356,10 +366,7 @@ export const questionRouter = createTRPCRouter({
         for (const code of ALL_ACHIEVEMENT_CODES) {
           if (earnedCodes.has(code)) continue;
           if (!evaluateAchievement(code, ctxForAchievements)) continue;
-          const row = await tx.achievement.findUnique({
-            where: { code },
-            select: { id: true, xpReward: true },
-          });
+          const row = catalogByCode.get(code);
           if (!row) continue;
           await tx.userAchievement.create({
             data: { userId, achievementId: row.id },
@@ -394,6 +401,10 @@ export const questionRouter = createTRPCRouter({
           longestStreak: streak.longestStreak,
           newlyEarnedCodes,
         };
+      }, {
+        // Remote pooler adds latency; default 5000ms is tight for this mutation.
+        maxWait: 5_000,
+        timeout: 15_000,
       });
 
       // Best-effort analytics. Do not await (fire-and-forget).
