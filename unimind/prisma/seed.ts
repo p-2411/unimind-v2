@@ -19,6 +19,9 @@ async function main() {
   await prisma.userStats.deleteMany();
   await prisma.course.deleteMany();
   // removed: NextAuth session and account models
+  await prisma.userAchievement.deleteMany();
+  await prisma.achievement.deleteMany();
+  await prisma.analyticsEvent.deleteMany();
   await prisma.user.deleteMany();
 
   // Seed Users
@@ -178,6 +181,33 @@ async function main() {
   console.log(
     `   ✓ Created ${initialData.assessmentUsers.length} assessment registrations`
   );
+
+  // Seed Achievements
+  console.log("🏅 Seeding achievements...");
+  const { ACHIEVEMENTS } = await import("./achievements-seed");
+  for (const a of ACHIEVEMENTS) {
+    await prisma.achievement.upsert({
+      where: { code: a.code },
+      create: {
+        code: a.code,
+        name: a.name,
+        description: a.description,
+        category: a.category,
+        tier: a.tier,
+        xpReward: a.xpReward,
+        iconKey: a.iconKey,
+      },
+      update: {
+        name: a.name,
+        description: a.description,
+        category: a.category,
+        tier: a.tier,
+        xpReward: a.xpReward,
+        iconKey: a.iconKey,
+      },
+    });
+  }
+  console.log(`   ✓ Upserted ${ACHIEVEMENTS.length} achievements`);
 
   console.log("\n✅ Database seeded successfully!");
 }
