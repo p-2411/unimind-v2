@@ -210,9 +210,21 @@ export const questionRouter = createTRPCRouter({
         // 5. Update UserTopic mastery (EMA).
         const existingUt = await tx.userTopic.findUnique({
           where: { userId_topicId: { userId, topicId: question.topicId } },
-          select: { masteryScore: true, masteryUpdatedAt: true, correctCount: true, totalCount: true },
+          select: { masteryScore: true, masteryUpdatedAt: true, correctCount: true, totalCount: true},
         });
+
+        const existingUs = await tx.userStats.findUnique({
+          where: { userId },
+          select: { lastActiveDate: true , currentStreak: true , longestStreak: true},
+        });
+
+
+        const lastActiveDate = existingUs?.lastActiveDate;
+        const currentStreak = existingUs?.currentStreak ?? 0;
+        const longestStreak = existingUs?.longestStreak ?? 0;
         const prevScore = existingUt?.masteryScore ?? 50;
+        let newStreak = currentStreak;
+        let newLongestStreak = longestStreak;
         const prevUpdatedAt = existingUt?.masteryUpdatedAt ?? now;
         const { masteryScore, masteryUpdatedAt } = applyMastery({
           prevScore,
@@ -244,6 +256,18 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
+        if (!lastActiveDate){
+          newStreak = 1;
+        } else if (today.getTime() - lastActiveDate.getTime() === 86400000) {
+              newStreak += 1;
+        } else if (today.getTime() - lastActiveDate.getTime() > 86400000) {
+              newStreak = 1;
+        }
+        
+        if (newStreak > longestStreak) {
+                  newLongestStreak = newStreak;
+              }
+
         // 6. Update UserStats (unchanged from current logic).
         await tx.userStats.upsert({
           where: { userId },
@@ -253,12 +277,16 @@ export const questionRouter = createTRPCRouter({
             totalCorrectAnswers: isCorrect ? 1 : 0,
             totalTimeSpent: input.timeSpentMs,
             lastActiveDate: today,
+            currentStreak: 1,
+            longestStreak: 1
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
             totalCorrectAnswers: { increment: isCorrect ? 1 : 0 },
             totalTimeSpent: { increment: input.timeSpentMs },
             lastActiveDate: today,
+            currentStreak: newStreak,
+            longestStreak: newLongestStreak
           },
         });
 
