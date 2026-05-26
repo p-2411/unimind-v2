@@ -124,6 +124,7 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           topic: { select: { name: true } },
+          difficulty:true
         },
       });
       if (!question) {
@@ -215,7 +216,7 @@ export const questionRouter = createTRPCRouter({
 
         const existingUs = await tx.userStats.findUnique({
           where: { userId },
-          select: { lastActiveDate: true , currentStreak: true , longestStreak: true},
+          select: { lastActiveDate: true , currentStreak: true , longestStreak: true, xp: true, level: true},
         });
 
 
@@ -225,12 +226,15 @@ export const questionRouter = createTRPCRouter({
         const prevScore = existingUt?.masteryScore ?? 50;
         let newStreak = currentStreak;
         let newLongestStreak = longestStreak;
+        let xp = existingUs?.xp ?? 0;
+        let level = existingUs?.level ?? 0;
         const prevUpdatedAt = existingUt?.masteryUpdatedAt ?? now;
         const { masteryScore, masteryUpdatedAt } = applyMastery({
           prevScore,
           prevUpdatedAt,
           isCorrect,
           now,
+          difficulty : question.difficulty
         });
         const correctCount = (existingUt?.correctCount ?? 0) + (isCorrect ? 1 : 0);
         const totalCount = (existingUt?.totalCount ?? 0) + 1;
@@ -263,10 +267,38 @@ export const questionRouter = createTRPCRouter({
         } else if (today.getTime() - lastActiveDate.getTime() > 86400000) {
               newStreak = 1;
         }
-        
+
         if (newStreak > longestStreak) {
                   newLongestStreak = newStreak;
-              }
+        }
+
+        if (isCorrect){
+          if (question.difficulty === 1) {
+            xp += 16;
+          } else if (question.difficulty === 2) {
+            xp += 24;
+          } else if (question.difficulty === 3) {
+            xp += 40;
+          }
+        } else if (!isCorrect){
+          if (question.difficulty === 1) {
+            xp += 1;
+          } else if (question.difficulty === 2) {
+            xp += 2;
+          } else if (question.difficulty === 3) {
+            xp += 4;
+          }
+        }
+
+        if (newStreak % 10 === 0 && newStreak !== 0) {
+          xp += 100;
+        }
+
+        if (prevScore < 95 && masteryScore >= 95) {
+          xp += 250;
+        }
+
+        level = Math.floor(Math.sqrt(xp / 50));
 
         // 6. Update UserStats (unchanged from current logic).
         await tx.userStats.upsert({
@@ -278,7 +310,9 @@ export const questionRouter = createTRPCRouter({
             totalTimeSpent: input.timeSpentMs,
             lastActiveDate: today,
             currentStreak: 1,
-            longestStreak: 1
+            longestStreak: 1,
+            xp : 0,
+            level : 0
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
@@ -286,7 +320,9 @@ export const questionRouter = createTRPCRouter({
             totalTimeSpent: { increment: input.timeSpentMs },
             lastActiveDate: today,
             currentStreak: newStreak,
-            longestStreak: newLongestStreak
+            longestStreak: newLongestStreak,
+            xp : xp,
+            level : level
           },
         });
 
