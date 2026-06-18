@@ -137,6 +137,7 @@ export const questionRouter = createTRPCRouter({
         select: {
           id: true,
           topicId: true,
+          subtopicId: true,
           answerIndex: true,
           explanation: true,
           topic: { select: { name: true } },
@@ -219,6 +220,7 @@ export const questionRouter = createTRPCRouter({
             userId,
             questionId: question.id,
             topicId: question.topicId,
+            subtopicId: question.subtopicId,
             isCorrect,
             rating: input.rating,
             timeSpentMs: input.timeSpentMs,

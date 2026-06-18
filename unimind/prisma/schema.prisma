@@ -128,10 +128,11 @@ model UserTopic {
 }
 
 model UserCourse {
-  id         String   @id @default(cuid())
-  userId     String   @db.Uuid
-  courseId   String
-  enrolledAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  userId              String   @db.Uuid
+  courseId            String
+  enrolledAt          DateTime @default(now())
+  currentWeekOverride Int?
 
   user   User   @relation("UserCourseEnrollments", fields: [userId], references: [id], onDelete: Cascade)
   course Course @relation("UserCourseEnrollments", fields: [courseId], references: [id], onDelete: Cascade)
@@ -172,18 +173,21 @@ model QuestionAttempt {
   userId      String   @db.Uuid
   questionId  String
   topicId     String // denormalized for cheap topic-scoped queries
+  subtopicId  String? // denormalized for cheap subtopic-scoped queries
   isCorrect   Boolean
   rating      Int // 1=Again, 2=Hard, 3=Good, 4=Easy
   timeSpentMs Int      @default(0)
   source      String // "paywall" | "in_app" — analytics only
   answeredAt  DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subtopic Subtopic? @relation(fields: [subtopicId], references: [id], onDelete: SetNull)
 
   @@index([userId, answeredAt])
   @@index([userId, topicId, answeredAt])
+  @@index([userId, subtopicId, answeredAt])
   @@map("question_attempts")
 }
 
@@ -213,6 +217,7 @@ model Topic {
   name        String
   description String?
   courseId    String
+  weekNumber  Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -234,8 +239,9 @@ model Subtopic {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  topic     Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic     Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
   questions Question[]
+  attempts  QuestionAttempt[]
 
   @@index([topicId])
   @@map("subtopics")
