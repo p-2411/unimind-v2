@@ -80,6 +80,7 @@ model UserStats {
 //   userId     String
 //   courseId   String
 //   enrolledAt DateTime @default(now())
+//   currentWeekOverride Int?
 
 //   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 //   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -202,6 +203,7 @@ model Course {
   topics      Topic[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
+  startDate DateTime?
 
   @@map("courses")
 }
