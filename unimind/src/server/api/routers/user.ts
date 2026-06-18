@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { readMastery } from "~/server/lib/scoring";
 
 const CALIBRATION_THRESHOLD = 10;
@@ -84,6 +88,51 @@ export const userRouter = createTRPCRouter({
       xp: userStats?.xp ?? 0,
       topicMastery,
       calibrationThreshold: CALIBRATION_THRESHOLD,
+    };
+  }),
+
+  progressStats: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const [userStats, userTopics] = await Promise.all([
+      ctx.db.userStats.findUnique({ where: { userId } }),
+      ctx.db.userTopic.findMany({
+        where: { userId },
+        select: {
+          topicId: true,
+          topicName: true,
+          masteryScore: true,
+          masteryUpdatedAt: true,
+          correctCount: true,
+          totalCount: true,
+          lastAnsweredAt: true,
+        },
+      }),
+    ]);
+    const now = new Date();
+    const topics = userTopics
+      .map((t) => ({
+        topicId: t.topicId,
+        name: t.topicName,
+        score: Math.round(
+          readMastery({
+            score: t.masteryScore,
+            updatedAt: t.masteryUpdatedAt,
+            now,
+          }),
+        ),
+        correctCount: t.correctCount,
+        totalCount: t.totalCount,
+        lastAnsweredAt: t.lastAnsweredAt,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    return {
+      currentStreak: userStats?.currentStreak ?? 0,
+      longestStreak: userStats?.longestStreak ?? 0,
+      level: userStats?.level ?? 1,
+      xp: userStats?.xp ?? 0,
+      topics,
     };
   }),
 
