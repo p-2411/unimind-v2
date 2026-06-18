@@ -38,8 +38,14 @@ export const questionRouter = createTRPCRouter({
             ? {
                 OR: [
                   { question: { contains: trimmed, mode: "insensitive" } },
-                  { topic: { name: { contains: trimmed, mode: "insensitive" } } },
-                  { subtopic: { name: { contains: trimmed, mode: "insensitive" } } },
+                  {
+                    topic: { name: { contains: trimmed, mode: "insensitive" } },
+                  },
+                  {
+                    subtopic: {
+                      name: { contains: trimmed, mode: "insensitive" },
+                    },
+                  },
                 ],
               }
             : {}),
@@ -53,7 +59,13 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           difficulty: true,
-          topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+          topic: {
+            select: {
+              id: true,
+              name: true,
+              course: { select: { name: true } },
+            },
+          },
           subtopic: { select: { id: true, name: true } },
         },
       });
@@ -73,7 +85,9 @@ export const questionRouter = createTRPCRouter({
         answerIndex: true,
         explanation: true,
         difficulty: true,
-        topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+        topic: {
+          select: { id: true, name: true, course: { select: { name: true } } },
+        },
         subtopic: { select: { id: true, name: true } },
       },
     });
@@ -92,7 +106,9 @@ export const questionRouter = createTRPCRouter({
         question: true,
         choices: true,
         difficulty: true,
-        topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+        topic: {
+          select: { id: true, name: true, course: { select: { name: true } } },
+        },
         subtopic: { select: { id: true, name: true } },
       },
     });
@@ -124,11 +140,14 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           topic: { select: { name: true } },
-          difficulty:true
+          difficulty: true,
         },
       });
       if (!question) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Question not found",
+        });
       }
 
       const isCorrect = input.choiceIndex === question.answerIndex;
@@ -211,14 +230,24 @@ export const questionRouter = createTRPCRouter({
         // 5. Update UserTopic mastery (EMA).
         const existingUt = await tx.userTopic.findUnique({
           where: { userId_topicId: { userId, topicId: question.topicId } },
-          select: { masteryScore: true, masteryUpdatedAt: true, correctCount: true, totalCount: true},
+          select: {
+            masteryScore: true,
+            masteryUpdatedAt: true,
+            correctCount: true,
+            totalCount: true,
+          },
         });
 
         const existingUs = await tx.userStats.findUnique({
           where: { userId },
-          select: { lastActiveDate: true , currentStreak: true , longestStreak: true, xp: true, level: true},
+          select: {
+            lastActiveDate: true,
+            currentStreak: true,
+            longestStreak: true,
+            xp: true,
+            level: true,
+          },
         });
-
 
         const lastActiveDate = existingUs?.lastActiveDate;
         const currentStreak = existingUs?.currentStreak ?? 0;
@@ -234,9 +263,10 @@ export const questionRouter = createTRPCRouter({
           prevUpdatedAt,
           isCorrect,
           now,
-          difficulty : question.difficulty
+          difficulty: question.difficulty,
         });
-        const correctCount = (existingUt?.correctCount ?? 0) + (isCorrect ? 1 : 0);
+        const correctCount =
+          (existingUt?.correctCount ?? 0) + (isCorrect ? 1 : 0);
         const totalCount = (existingUt?.totalCount ?? 0) + 1;
 
         const userTopic = await tx.userTopic.upsert({
@@ -260,19 +290,19 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        if (!lastActiveDate){
+        if (!lastActiveDate) {
           newStreak = 1;
         } else if (today.getTime() - lastActiveDate.getTime() === 86400000) {
-              newStreak += 1;
+          newStreak += 1;
         } else if (today.getTime() - lastActiveDate.getTime() > 86400000) {
-              newStreak = 1;
+          newStreak = 1;
         }
 
         if (newStreak > longestStreak) {
-                  newLongestStreak = newStreak;
+          newLongestStreak = newStreak;
         }
 
-        if (isCorrect){
+        if (isCorrect) {
           if (question.difficulty === 1) {
             xp += 16;
           } else if (question.difficulty === 2) {
@@ -280,7 +310,7 @@ export const questionRouter = createTRPCRouter({
           } else if (question.difficulty === 3) {
             xp += 40;
           }
-        } else if (!isCorrect){
+        } else if (!isCorrect) {
           if (question.difficulty === 1) {
             xp += 1;
           } else if (question.difficulty === 2) {
@@ -311,8 +341,8 @@ export const questionRouter = createTRPCRouter({
             lastActiveDate: today,
             currentStreak: 1,
             longestStreak: 1,
-            xp : 0,
-            level : 0
+            xp: 0,
+            level: 0,
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
@@ -321,8 +351,8 @@ export const questionRouter = createTRPCRouter({
             lastActiveDate: today,
             currentStreak: newStreak,
             longestStreak: newLongestStreak,
-            xp : xp,
-            level : level
+            xp: xp,
+            level: level,
           },
         });
 

@@ -15,7 +15,7 @@ export function applyMastery({
   prevUpdatedAt,
   isCorrect,
   now,
-  difficulty
+  difficulty,
 }: {
   prevScore: number;
   prevUpdatedAt: Date;
