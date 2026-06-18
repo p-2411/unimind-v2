@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BookOpenText,
   LayoutGrid,
   ListOrdered,
   LogOut,
@@ -27,11 +26,10 @@ import {
 } from "~/components/ui/sidebar";
 
 const items = [
-  { title: "Dashboard", url: "/",          icon: LayoutGrid },
+  { title: "Dashboard", url: "/", icon: LayoutGrid },
   { title: "Questions", url: "/questions", icon: ListOrdered },
-  { title: "Topics",    url: "/topics",    icon: BookOpenText },
-  { title: "Progress",  url: "/progress",  icon: TrendingUp },
-  { title: "Settings",  url: "/settings",  icon: Settings },
+  { title: "Progress", url: "/progress", icon: TrendingUp },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -56,7 +54,7 @@ export function AppSidebar() {
 
       <SidebarContent className="pt-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
+          <SidebarGroupLabel className="font-mono text-[10px] tracking-[0.24em] text-[color:var(--color-fg-mute)] uppercase">
             Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
