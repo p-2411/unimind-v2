@@ -1,35 +1,57 @@
-# TODO
-[] Account/settings page
-[] Report feature on questions
+# UniMind — TODO
 
-## Database connection / scaling
+---
 
-Currently running on a **direct** Supabase connection (port 5432). Fine for dev and pre-launch. Before launch or when concurrent users grow, revisit:
+## Now (blocks other work)
 
-- **Pooling strategy.** Direct connections don't scale — each Next.js request can open its own Postgres connection and exhaust the server. Options:
-  - Supabase **transaction pooler** (port 6543) with `?pgbouncer=true` on `DATABASE_URL` and direct URL kept as `DIRECT_URL` for Prisma migrations. Requires removing interactive `$transaction(async tx => …)` calls (pgbouncer transaction mode doesn't support them reliably).
-  - Supabase **session pooler** — less strict, but can still exhaust under hot-reload / many Prisma clients.
-  - Move to **Neon** + `@neondatabase/serverless` HTTP driver via Prisma's driver adapter. No persistent connection, no pool exhaustion, very fast cold starts. Tradeoff: no interactive transactions across requests, no LISTEN/NOTIFY.
+| # | Task | Notes |
+|---|------|-------|
+| 1 | Seed COMP1511 real data | Topics, subtopics, week numbers, course start date |
+| 2 | Generate question bank | AI-prompted per subtopic, difficulty 1–3 |
+| 3 | Wire week-based filtering into `picker.ts` | Blocked until seed done |
 
-- **Audit interactive transactions.** `question.answer` currently uses `ctx.db.$transaction(async tx => …)`. If we move to a transaction-mode pooler or HTTP driver, rewrite as sequential idempotent upserts (both steps are already idempotent — the transaction mostly exists for consistency, not correctness).
+---
 
-- **Connection limit tuning.** Set `connection_limit` on the Prisma URL once we know runtime concurrency. Too high = Postgres dies; too low = requests queue.
+## Next (can start anytime)
 
-- **Observability.** Add Prisma query logging / slow-query alerts before scaling so we can see which queries hold connections longest.
+| # | Task | Notes |
+|---|------|-------|
+| 4 | Admin page | User count, activity stats, enrolled courses breakdown |
+| 5 | Flashcard view | One question per page, answer before next appears |
+| 6 | Live user counter | Badge only visible past 100 users |
+| 7 | Anonymised analytics endpoints | Aggregate `QuestionAttempt` / `UserTopic` / `UserStats` |
+| 8 | Chrome extension | Paywall interceptor |
 
+---
 
-## Live counter 
-Make live counter represent ACTUAL number of users -- badge only shows when past 100 users
+## Later (post-launch)
 
-## Flashcard view style rather than question list
-i.e. each question occupies the page and u answer one question before moving to the next
+| # | Task | Notes |
+|---|------|-------|
+| 9 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
+| 10 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
+| 11 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
 
+---
 
-## Scoring follow-ups
+## Scaling (revisit before launch)
 
-Tracked from the 2026-04-17 scoring design. None block launch; revisit after first-batch user feedback.
+Currently on Supabase **session pooler** (port 5432). Fine for now. Options when load grows:
 
-- **Survey first-batch users on the 4-grade self-rate prompt.** Both the in-app practice flow and the Chrome paywall ask users to rate Again / Hard / Good / Easy after revealing the answer. If feedback says it's too much friction *on the paywall specifically*, fall back to binary on that surface (rating maps to `Again=1` for incorrect, `Good=3` for correct). Keep in-app at 4-grade unless feedback is universally negative. Until the 4-grade UI ships, both surfaces send binary ratings derived from correctness.
-- **Difficulty-weighted mastery EMA.** Currently each attempt blends in with a flat `ATTEMPT_WEIGHT=0.15`. Once `Question.difficulty` ratings are reliable, scale that weight by difficulty so getting harder questions right boosts mastery more than easy ones.
-- **Assessment-weighted paywall course selection.** `nextForPaywall` currently pulls the globally most-due card across all enrolled courses. Switch to weighted random across courses, weighted by closest assessment date (uses the existing `Assessment` model). Falls back to current global most-due when no assessments are scheduled.
-- **`QuestionAttempt` cascade behavior on Topic deletion.** Currently `topic` FK on `question_attempts` is `onDelete: Cascade`, so removing a Topic silently erases all related audit rows. The audit log's stated purpose is recompute + analytics; consider switching to `Restrict` (refuse Topic delete if attempts exist) or making `topicId` nullable with `SetNull` to preserve historical rows. Theoretical risk only pre-launch; revisit when content management workflows land.
+- **Transaction pooler** (port 6543) — needs interactive `$transaction` removed from `question.answer`
+- **Neon HTTP driver** — no persistent connections, great for serverless; no interactive transactions
+- Set `connection_limit` in `DATABASE_URL` once concurrency is known
+- Add slow-query logging before scaling
+
+> Do NOT switch to port 6543 without first refactoring `question.answer`.
+
+---
+
+## Done
+
+- [x] Progress page — streak, level, XP, topic mastery (real data + AI overview)
+- [x] Settings page — name, password, enroll/unenroll, delete account (all real)
+- [x] XP, level, streak tracking wired into `question.answer`
+- [x] Difficulty-weighted mastery EMA
+- [x] Subtopic tracking — `subtopicId` on `QuestionAttempt`, subtopic breakdown on progress page
+- [x] Topic mastery grouped by course on progress page
