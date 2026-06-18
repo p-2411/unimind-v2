@@ -1,0 +1,472 @@
+"use client";
+
+import { useState } from "react";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/react";
+import { useSupabase } from "~/components/providers/supabase-provider";
+import { useRouter } from "next/navigation";
+
+type User = RouterOutputs["user"]["me"];
+type Course = { id: string; name: string; enrolled: boolean };
+
+function SectionHead({ title }: { title: string }) {
+  return (
+    <div className="mb-4 border-b border-[color:var(--color-rule)] pb-2">
+      <h2 className="font-mono text-[14px] font-semibold tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-6">
+      <span className="w-32 shrink-0 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
+        {label}
+      </span>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
+
+function Input({
+  value,
+  onChange,
+  readOnly,
+  type = "text",
+  placeholder,
+}: {
+  value?: string;
+  onChange?: (v: string) => void;
+  readOnly?: boolean;
+  type?: string;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+      readOnly={readOnly}
+      placeholder={placeholder}
+      className="w-full border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] px-3 py-2 font-mono text-[13px] text-[color:var(--color-fg)] transition-colors outline-none placeholder:text-[color:var(--color-fg-mute)] read-only:cursor-not-allowed read-only:opacity-50 focus:border-[color:var(--color-phosphor)]"
+    />
+  );
+}
+
+function SaveButton({
+  label,
+  savedLabel = "Saved",
+  saved,
+  pending,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  savedLabel?: string;
+  saved: boolean;
+  pending: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={pending || disabled}
+      className="inline-flex items-center gap-2 border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-[color:var(--color-void)] uppercase transition-colors hover:bg-[color:var(--color-phosphor)]/90 disabled:cursor-not-allowed disabled:border-[color:var(--color-rule)] disabled:bg-transparent disabled:text-[color:var(--color-fg-mute)]"
+    >
+      {saved ? (
+        <>
+          <Check className="h-3.5 w-3.5" strokeWidth={3} /> {savedLabel}
+        </>
+      ) : pending ? (
+        "Saving…"
+      ) : (
+        label
+      )}
+    </button>
+  );
+}
+
+export function SettingsForm({
+  user,
+  courses: initialCourses,
+}: {
+  user: User;
+  courses: Course[];
+}) {
+  const { supabase } = useSupabase();
+
+  // Account
+  const [name, setName] = useState(user.name);
+  const [nameSaved, setNameSaved] = useState(false);
+  const updateName = api.user.updateName.useMutation({
+    onSuccess: () => {
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2000);
+    },
+  });
+
+  // Password
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordPending, setPasswordPending] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  async function handlePasswordChange() {
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords don't match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters.");
+      return;
+    }
+    setPasswordPending(true);
+    setPasswordError(null);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (signInError) {
+      setPasswordError("Current password is incorrect.");
+      setPasswordPending(false);
+      return;
+    }
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    setPasswordPending(false);
+    if (updateError) {
+      setPasswordError(updateError.message);
+      return;
+    }
+    setPasswordSaved(true);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setTimeout(() => setPasswordSaved(false), 2000);
+  }
+
+  // Courses
+  const [courses, setCourses] = useState(initialCourses);
+  const [weekOverrides, setWeekOverrides] = useState<Record<string, number>>(
+    {},
+  );
+  const [unenrollConfirm, setUnenrollConfirm] = useState<string | null>(null);
+
+  const enroll = api.course.enroll.useMutation({
+    onSuccess: (_, { courseId }) =>
+      setCourses((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, enrolled: true } : c)),
+      ),
+  });
+
+  const unenroll = api.course.unenroll.useMutation({
+    onSuccess: (_, { courseId }) => {
+      setCourses((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, enrolled: false } : c)),
+      );
+      setUnenrollConfirm(null);
+    },
+  });
+
+  const router = useRouter(); // import from "next/navigation"
+  const deleteAccount = api.user.deleteAccount.useMutation({
+    onSuccess: async () => {
+      await supabase.auth.signOut();
+      router.push("/login");
+    },
+  });
+
+  function handleCourseToggle(course: Course) {
+    if (course.enrolled) {
+      setUnenrollConfirm(course.id);
+    } else {
+      enroll.mutate({ courseId: course.id });
+    }
+  }
+
+  function adjustWeek(courseId: string, delta: number) {
+    setWeekOverrides((prev) => ({
+      ...prev,
+      [courseId]: Math.max(1, (prev[courseId] ?? 1) + delta),
+    }));
+  }
+
+  // Danger zone
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 pt-8 pb-16 md:px-8">
+      {/* Account */}
+      <section className="term-rise">
+        <SectionHead title="Account" />
+        <div className="space-y-4">
+          <Field label="Avatar">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] font-mono text-[16px] text-[color:var(--color-phosphor)]">
+                {name[0]?.toUpperCase() ?? "?"}
+              </div>
+              <button className="inline-flex items-center gap-2 border border-[color:var(--color-rule-hi)] px-3 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-soft)] uppercase transition-colors hover:border-[color:var(--color-fg-soft)]">
+                <Upload className="h-3 w-3" />
+                Upload
+              </button>
+            </div>
+          </Field>
+          <Field label="Name">
+            <Input value={name} onChange={setName} />
+          </Field>
+          <Field label="Email">
+            <Input value={user.email} readOnly />
+          </Field>
+          <div className="flex justify-end">
+            <SaveButton
+              label="Save account"
+              saved={nameSaved}
+              pending={updateName.isPending}
+              disabled={name === user.name}
+              onClick={() => updateName.mutate({ name })}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Password */}
+      <section className="term-rise mt-10" style={{ animationDelay: "60ms" }}>
+        <SectionHead title="Password" />
+        <div className="space-y-4">
+          <Field label="Current">
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Field label="New">
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={setNewPassword}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Field label="Confirm">
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              placeholder="••••••••"
+            />
+          </Field>
+          {passwordError && (
+            <p className="font-mono text-[11px] text-[color:var(--color-red)]">
+              {passwordError}
+            </p>
+          )}
+          <div className="flex justify-end">
+            <SaveButton
+              label="Change password"
+              saved={passwordSaved}
+              pending={passwordPending}
+              disabled={!currentPassword || !newPassword || !confirmPassword}
+              onClick={handlePasswordChange}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Courses */}
+      <section
+        className="term-rise mt-10"
+        style={{ animationDelay: "120ms" }}
+      >
+        <SectionHead title="Courses" />
+        <ul className="divide-y divide-[color:var(--color-rule)] border border-[color:var(--color-rule)]">
+          {courses.map((course) => (
+            <li key={course.id} className="bg-[color:var(--color-panel)]">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <button
+                  onClick={() => handleCourseToggle(course)}
+                  disabled={enroll.isPending || unenroll.isPending}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                    course.enrolled
+                      ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
+                      : "border-[color:var(--color-rule-hi)] text-transparent hover:border-[color:var(--color-fg-soft)]"
+                  }`}
+                >
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                </button>
+                <span className="flex-1 font-sans text-[13px] text-[color:var(--color-fg)]">
+                  {course.name}
+                </span>
+              </div>
+
+              {unenrollConfirm === course.id && (
+                <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-amber)]" />
+                  <span className="flex-1 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
+                    This deletes all your progress for this course.
+                  </span>
+                  <button
+                    onClick={() => setUnenrollConfirm(null)}
+                    className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase hover:text-[color:var(--color-fg)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => unenroll.mutate({ courseId: course.id })}
+                    disabled={unenroll.isPending}
+                    className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-red)] uppercase hover:opacity-80"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              )}
+
+              {course.enrolled && unenrollConfirm !== course.id && (
+                <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
+                  <span className="font-mono text-[11px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase">
+                    Week
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => adjustWeek(course.id, -1)}
+                      className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                    <span className="w-6 text-center font-mono text-[13px] text-[color:var(--color-phosphor)] tabular-nums">
+                      {weekOverrides[course.id] ?? 1}
+                    </span>
+                    <button
+                      onClick={() => adjustWeek(course.id, 1)}
+                      className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </button>
+                  </div>
+                  {weekOverrides[course.id] && (
+                    <span className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-amber)] uppercase">
+                      session override
+                    </span>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Notifications */}
+      <section
+        className="term-rise mt-10"
+        style={{ animationDelay: "180ms" }}
+      >
+        <SectionHead title="Notifications" />
+        <div className="border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-sans text-[13px] text-[color:var(--color-fg)]">
+                Daily study reminder
+              </div>
+              <div className="mt-0.5 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
+                Coming soon
+              </div>
+            </div>
+            <div className="border border-[color:var(--color-rule-hi)] px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
+              Soon
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feedback */}
+      <section
+        className="term-rise mt-10"
+        style={{ animationDelay: "240ms" }}
+      >
+        <SectionHead title="Feedback" />
+        <div className="space-y-3">
+          {["Report a bug", "Suggest a question", "General feedback"].map(
+            (label) => (
+              <button
+                key={label}
+                className="w-full border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] px-4 py-3 text-left font-sans text-[13px] text-[color:var(--color-fg-soft)] transition-colors hover:border-[color:var(--color-fg-soft)] hover:text-[color:var(--color-fg)]"
+              >
+                {label}{" "}
+                <span className="ml-2 font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase">
+                  coming soon
+                </span>
+              </button>
+            ),
+          )}
+        </div>
+      </section>
+
+      {/* Danger zone */}
+      <section
+        className="term-rise mt-10"
+        style={{ animationDelay: "300ms" }}
+      >
+        <SectionHead title="Danger Zone" />
+        <div className="border border-[color:var(--color-red)]/30 bg-[color:var(--color-panel)] px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="font-sans text-[13px] text-[color:var(--color-fg)]">
+                Delete account
+              </div>
+              <div className="mt-0.5 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
+                Permanently delete your account and all data. This cannot be
+                undone.
+              </div>
+            </div>
+            {!deleteConfirm ? (
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="inline-flex shrink-0 items-center gap-2 border border-[color:var(--color-red)]/50 px-3 py-2 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-red)] uppercase transition-colors hover:border-[color:var(--color-red)]"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            ) : (
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setDeleteConfirm(false)}
+                  className="border border-[color:var(--color-rule-hi)] px-3 py-2 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase transition-colors hover:border-[color:var(--color-fg-soft)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteAccount.mutate()}
+                  disabled={deleteAccount.isPending}
+                  className="border border-[color:var(--color-red)] bg-[color:var(--color-red)] px-3 py-2 font-mono text-[11px] tracking-[0.18em] text-white uppercase disabled:opacity-50"
+                >
+                  {deleteAccount.isPending ? "Deleting…" : "Confirm"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
