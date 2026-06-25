@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting database seed...\n");
 
-  // Clear existing data (in reverse order of dependencies)
-  console.log("🗑️  Clearing existing data...");
+  // Clear course content only — real users (via Supabase auth) are preserved
+  console.log("🗑️  Clearing existing course data...");
   await prisma.questionAttempt.deleteMany();
   await prisma.userQuestion.deleteMany();
   await prisma.question.deleteMany();
@@ -16,24 +16,7 @@ async function main() {
   await prisma.userCourse.deleteMany();
   await prisma.topic.deleteMany();
   await prisma.assessment.deleteMany();
-  await prisma.userStats.deleteMany();
   await prisma.course.deleteMany();
-  // removed: NextAuth session and account models
-  await prisma.user.deleteMany();
-
-  // Seed Users
-  console.log("👤 Seeding users...");
-  for (const user of initialData.users) {
-    await prisma.user.create({
-      data: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        image: user.image,
-      },
-    });
-  }
-  console.log(`   ✓ Created ${initialData.users.length} users`);
 
   // Seed Courses
   console.log("📚 Seeding courses...");
@@ -45,6 +28,7 @@ async function main() {
         description: course.description,
         color: course.color,
         icon: course.icon,
+        startDate: course.startDate ? new Date(course.startDate) : null,
       },
     });
   }
@@ -59,6 +43,7 @@ async function main() {
         name: topic.name,
         description: topic.description,
         courseId: topic.courseId,
+        weekNumber: topic.weekNumber ?? null,
       },
     });
   }
