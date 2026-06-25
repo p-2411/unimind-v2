@@ -7,6 +7,7 @@ import {
   ListOrdered,
   LogOut,
   Settings,
+  ShieldAlert,
   TrendingUp,
 } from "lucide-react";
 import { UnimindLogo } from "~/components/logo";
@@ -30,6 +31,7 @@ const items = [
   { title: "Questions", url: "/questions", icon: ListOrdered },
   { title: "Progress", url: "/progress", icon: TrendingUp },
   { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Admin", url: "/admin", icon: ShieldAlert },
 ];
 
 export function AppSidebar() {
