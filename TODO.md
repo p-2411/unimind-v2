@@ -6,9 +6,7 @@
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | Seed COMP1511 real data | Topics, subtopics, week numbers, course start date |
-| 2 | Generate question bank | AI-prompted per subtopic, difficulty 1–3 |
-| 3 | Wire week-based filtering into `picker.ts` | Blocked until seed done |
+| 1 | Flashcard view | One question per page, answer before next appears |
 
 ---
 
@@ -16,11 +14,9 @@
 
 | # | Task | Notes |
 |---|------|-------|
-| 4 | Admin page | User count, activity stats, enrolled courses breakdown |
-| 5 | Flashcard view | One question per page, answer before next appears |
-| 6 | Live user counter | Badge only visible past 100 users |
-| 7 | Anonymised analytics endpoints | Aggregate `QuestionAttempt` / `UserTopic` / `UserStats` |
-| 8 | Chrome extension | Paywall interceptor |
+| 2 | Wire real data into admin aggregate stats | Replace filler in `FILLER_DAILY`, `FILLER_TOP_TOPICS`, `FILLER_DIFFICULTY` with real DB queries |
+| 3 | Live user counter | Badge only visible past 100 users |
+| 4 | Chrome extension | Paywall interceptor |
 
 ---
 
@@ -28,9 +24,9 @@
 
 | # | Task | Notes |
 |---|------|-------|
-| 9 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
-| 10 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
-| 11 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
+| 5 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
+| 6 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
+| 7 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
 
 ---
 
@@ -49,9 +45,13 @@ Currently on Supabase **session pooler** (port 5432). Fine for now. Options when
 
 ## Done
 
-- [x] Progress page — streak, level, XP, topic mastery (real data + AI overview)
+- [x] Admin page — real user/course/accuracy stats + gated by `admins` table
+- [x] COMP1521 T2 2026 seeded — 8 topics, 37 subtopics, 333 questions (AI-generated, difficulty 1–3)
+- [x] Week-based question filtering in `picker.ts` — only surfaces topics ≤ current week
+- [x] Week override in settings — persists to `UserCourse.currentWeekOverride`, used by picker
+- [x] Progress page — streak, level, XP, topic mastery (real data + AI overview, non-blocking Suspense)
+- [x] Progress page topics grouped by course, with subtopic breakdown
 - [x] Settings page — name, password, enroll/unenroll, delete account (all real)
 - [x] XP, level, streak tracking wired into `question.answer`
 - [x] Difficulty-weighted mastery EMA
 - [x] Subtopic tracking — `subtopicId` on `QuestionAttempt`, subtopic breakdown on progress page
-- [x] Topic mastery grouped by course on progress page
