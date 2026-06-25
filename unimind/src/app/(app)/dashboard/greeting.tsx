@@ -18,7 +18,7 @@ export function Greeting() {
 
   return (
     <>
-      <h1 className="mt-2 font-mono text-[40px] font-semibold leading-[1] tracking-tight md:text-[52px]">
+      <h1 className="mt-2 font-mono text-[40px] font-semibold leading-[1] tracking-tighter md:text-[52px]">
         {msg.hi}
         <span className="text-[color:var(--color-phosphor)]">.</span>
       </h1>
