@@ -10,11 +10,14 @@ export default async function SettingsPage() {
   ]);
 
   const enrolledIds = new Set(myCourses.map((uc) => uc.courseId));
+  const weekOverrides = new Map(myCourses.map((uc) => [uc.courseId, uc.currentWeekOverride]));
 
   const courses = allCourses.map((c) => ({
     id: c.id,
     name: c.name,
     enrolled: enrolledIds.has(c.id),
+    startDate: c.startDate?.toISOString() ?? null,
+    weekOverride: weekOverrides.get(c.id) ?? null,
   }));
 
   return (

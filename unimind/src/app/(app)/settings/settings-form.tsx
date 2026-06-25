@@ -15,7 +15,13 @@ import { useSupabase } from "~/components/providers/supabase-provider";
 import { useRouter } from "next/navigation";
 
 type User = RouterOutputs["user"]["me"];
-type Course = { id: string; name: string; enrolled: boolean };
+type Course = { id: string; name: string; enrolled: boolean; startDate: string | null; weekOverride: number | null };
+
+function courseWeek(startDate: string | null): number {
+  if (!startDate) return 1;
+  const ms = Date.now() - new Date(startDate).getTime();
+  return Math.max(1, Math.floor(ms / (7 * 24 * 60 * 60 * 1000)) + 1);
+}
 
 function SectionHead({ title }: { title: string }) {
   return (
@@ -168,7 +174,7 @@ export function SettingsForm({
   // Courses
   const [courses, setCourses] = useState(initialCourses);
   const [weekOverrides, setWeekOverrides] = useState<Record<string, number>>(
-    {},
+    () => Object.fromEntries(initialCourses.filter((c) => c.weekOverride !== null).map((c) => [c.id, c.weekOverride!])),
   );
   const [unenrollConfirm, setUnenrollConfirm] = useState<string | null>(null);
 
@@ -188,7 +194,9 @@ export function SettingsForm({
     },
   });
 
-  const router = useRouter(); // import from "next/navigation"
+  const setWeekOverride = api.course.setWeekOverride.useMutation();
+
+  const router = useRouter();
   const deleteAccount = api.user.deleteAccount.useMutation({
     onSuccess: async () => {
       await supabase.auth.signOut();
@@ -205,10 +213,11 @@ export function SettingsForm({
   }
 
   function adjustWeek(courseId: string, delta: number) {
-    setWeekOverrides((prev) => ({
-      ...prev,
-      [courseId]: Math.max(1, (prev[courseId] ?? 1) + delta),
-    }));
+    const course = courses.find((c) => c.id === courseId);
+    const current = weekOverrides[courseId] ?? courseWeek(course?.startDate ?? null);
+    const next = Math.max(1, current + delta);
+    setWeekOverrides((prev) => ({ ...prev, [courseId]: next }));
+    setWeekOverride.mutate({ courseId, week: next });
   }
 
   // Danger zone
@@ -355,7 +364,7 @@ export function SettingsForm({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                     <span className="w-6 text-center font-mono text-[13px] text-[color:var(--color-phosphor)] tabular-nums">
-                      {weekOverrides[course.id] ?? 1}
+                      {weekOverrides[course.id] ?? courseWeek(course.startDate)}
                     </span>
                     <button
                       onClick={() => adjustWeek(course.id, 1)}
@@ -364,9 +373,10 @@ export function SettingsForm({
                       <ChevronUp className="h-3 w-3" />
                     </button>
                   </div>
-                  {weekOverrides[course.id] && (
+                  {weekOverrides[course.id] !== undefined &&
+                    weekOverrides[course.id] !== courseWeek(course.startDate) && (
                     <span className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-amber)] uppercase">
-                      session override
+                      override
                     </span>
                   )}
                 </div>
