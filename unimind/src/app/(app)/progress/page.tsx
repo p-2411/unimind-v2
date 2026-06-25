@@ -1,29 +1,68 @@
+import { Suspense } from "react";
 import { Flame, Brain } from "lucide-react";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { api } from "~/trpc/server";
 import { TopicList } from "./topic-list";
 import Anthropic from "@anthropic-ai/sdk";
+import type { RouterOutputs } from "~/trpc/react";
 
-export default async function ProgressPage() {
-  const stats = await api.user.progressStats();
+type ProgressStats = RouterOutputs["user"]["progressStats"];
+
+async function AIOverview({ stats }: { stats: ProgressStats }) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const topicSummary = stats.topics
     .map((t) => `${t.score}% mastery (${t.correctCount}/${t.totalCount} correct)`)
-  .join("\n");
+    .join("\n");
 
   const aiResponse = await anthropic.messages.create({
-  model: "claude-haiku-4-5-20251001",
-  max_tokens: 200,
-  messages: [
-    {
-      role: "user",
-      content: `You are a study coach. Give a 2-3 sentence personalised overview of this student's progress. Be specific, encouraging but honest. Plain text only, no markdown headings or formatting.\n\nData:\n- Streak: ${stats.currentStreak} days\n- Level: ${stats.level}, XP: ${stats.xp}\n- Topics:\n${topicSummary}`,
-    },
-  ],
-});
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 200,
+    messages: [
+      {
+        role: "user",
+        content: `You are a study coach. Give a 2-3 sentence personalised overview of this student's progress. Be specific, encouraging but honest. Plain text only, no markdown headings or formatting.\n\nData:\n- Streak: ${stats.currentStreak} days\n- Level: ${stats.level}, XP: ${stats.xp}\n- Topics:\n${topicSummary}`,
+      },
+    ],
+  });
 
-  const aiOverview = (aiResponse.content[0] as { text: string }).text;
+  const text = (aiResponse.content[0] as { text: string }).text;
+
+  return (
+    <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+      <div className="flex gap-3">
+        <Brain
+          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-magenta)]"
+          strokeWidth={2}
+        />
+        <p className="font-sans text-[13.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
+          {text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AIOverviewSkeleton() {
+  return (
+    <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+      <div className="flex gap-3">
+        <Brain
+          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-magenta)] animate-pulse"
+          strokeWidth={2}
+        />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-full rounded bg-[color:var(--color-rule-hi)] animate-pulse" />
+          <div className="h-3 w-4/5 rounded bg-[color:var(--color-rule-hi)] animate-pulse" />
+          <div className="h-3 w-2/3 rounded bg-[color:var(--color-rule-hi)] animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function ProgressPage() {
+  const stats = await api.user.progressStats();
 
   const xpForNextLevel = 50 * (stats.level + 1) * (stats.level + 1);
   const xpForCurrentLevel = 50 * stats.level * stats.level;
@@ -145,17 +184,9 @@ export default async function ProgressPage() {
               beta
             </span>
           </div>
-          <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
-            <div className="flex gap-3">
-              <Brain
-                className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-magenta)]"
-                strokeWidth={2}
-              />
-              <p className="font-sans text-[13.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
-                {aiOverview}
-              </p>
-            </div>
-          </div>
+          <Suspense fallback={<AIOverviewSkeleton />}>
+            <AIOverview stats={stats} />
+          </Suspense>
         </section>
       </main>
     </div>
