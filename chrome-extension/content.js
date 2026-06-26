@@ -33,8 +33,15 @@ async function getBlockedList() {
 
 async function getAuth() {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'GET_AUTH' }, (resp) => {
-      resolve(resp?.token ?? null);
+    chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
+      const { unimindToken, unimindTokenExpiry } = data;
+      if (!unimindToken) { resolve(null); return; }
+      // Reject if token is expired (expires_at is a Unix timestamp in seconds).
+      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) {
+        resolve(null);
+        return;
+      }
+      resolve(unimindToken);
     });
   });
 }

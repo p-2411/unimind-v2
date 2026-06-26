@@ -26,8 +26,14 @@ async function saveStorage(data) {
 
 async function getAuth() {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'GET_AUTH' }, (resp) => {
-      resolve(resp?.token ?? null);
+    chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
+      const { unimindToken, unimindTokenExpiry } = data;
+      if (!unimindToken) { resolve(null); return; }
+      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) {
+        resolve(null);
+        return;
+      }
+      resolve(unimindToken);
     });
   });
 }
