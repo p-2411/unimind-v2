@@ -183,30 +183,38 @@ function buildNoQuestionsHTML() {
 }
 
 async function fetchQuestion() {
-  const resp = await fetch(`${API_BASE}/api/extension/question`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  return data.question ?? null;
+  try {
+    const resp = await fetch(`${API_BASE}/api/extension/question`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.question ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function submitAnswer(choiceIndex, rating, timeSpentMs) {
-  const resp = await fetch(`${API_BASE}/api/extension/answer`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      questionId: currentQuestion.id,
-      choiceIndex,
-      rating,
-      timeSpentMs,
-    }),
-  });
-  if (!resp.ok) return null;
-  return resp.json();
+  try {
+    const resp = await fetch(`${API_BASE}/api/extension/answer`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        questionId: currentQuestion.id,
+        choiceIndex,
+        rating,
+        timeSpentMs,
+      }),
+    });
+    if (!resp.ok) return null;
+    return resp.json();
+  } catch {
+    return null;
+  }
 }
 
 // FSRS rating derived from time spent (can't know correctness before submitting).
@@ -293,6 +301,8 @@ function attachSkipHandler() {
 hidePageInstantly();
 
 (async () => {
+  // Safety net: always restore page visibility if anything throws.
+  // Without this, an uncaught error leaves the page permanently hidden.
   const blocked = await getBlockedList();
   if (!isBlocked(getHostname(), blocked)) {
     showPage();
@@ -324,4 +334,4 @@ hidePageInstantly();
   startedAt = Date.now();
   showOverlay(buildQuestionHTML(currentQuestion));
   attachOverlayHandlers();
-})();
+})().catch(() => showPage());
