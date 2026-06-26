@@ -1,36 +1,23 @@
-// Runs on the UniMind web app — syncs the Supabase session into
-// chrome.storage.local so content scripts on blocked sites can read it.
+// Runs on the UniMind web app — fetches the session token from the server
+// (same-origin, so cookies work) and stores it in chrome.storage.local.
 
-function findSessionInLocalStorage() {
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && /^sb-.+-auth-token$/.test(key)) {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      try {
-        const session = JSON.parse(raw);
-        if (session?.access_token) return session;
-      } catch { /* skip malformed */ }
-    }
-  }
-  return null;
-}
-
-function sync() {
-  const session = findSessionInLocalStorage();
-  if (session?.access_token) {
+async function sync() {
+  try {
+    const resp = await fetch('/api/extension/token');
+    if (!resp.ok) return;
+    const { token, expiresAt } = await resp.json();
     chrome.storage.local.set({
-      unimindToken: session.access_token,
-      unimindTokenExpiry: session.expires_at ?? null,
+      unimindToken: token ?? null,
+      unimindTokenExpiry: expiresAt ?? null,
     });
-  } else {
-    chrome.storage.local.set({ unimindToken: null, unimindTokenExpiry: null });
+  } catch {
+    // App not reachable — leave existing stored value alone.
   }
 }
 
 sync();
 
-// Re-sync whenever auth state changes (login / logout / token refresh).
-window.addEventListener('storage', (e) => {
-  if (e.key && /sb-.+-auth-token$/.test(e.key)) sync();
+// Re-sync when auth state changes (visibility means user just switched back).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') sync();
 });
