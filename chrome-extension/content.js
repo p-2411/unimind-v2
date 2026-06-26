@@ -204,11 +204,14 @@ async function fetchQuestion() {
     const resp = await fetch(`${API_BASE}/api/extension/question`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    console.log('[UniMind] /api/extension/question status:', resp.status);
     if (resp.status === 401) return 'unauthorized';
     if (!resp.ok) return null;
     const data = await resp.json();
+    console.log('[UniMind] question response body:', JSON.stringify(data));
     return data.question ?? null;
-  } catch {
+  } catch (e) {
+    console.error('[UniMind] fetchQuestion threw:', e);
     return null;
   }
 }
@@ -315,25 +318,25 @@ function attachSkipHandler() {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-// Pre-emptively hide to prevent flash; restore quickly if not blocked.
 hidePageInstantly();
 
 (async () => {
-  // Safety net: always restore page visibility if anything throws.
-  // Without this, an uncaught error leaves the page permanently hidden.
   const blocked = await getBlockedList();
+  console.log('[UniMind] hostname:', getHostname(), '| blocked:', blocked);
   if (!isBlocked(getHostname(), blocked)) {
     showPage();
     return;
   }
 
   const granted = await checkGranted();
+  console.log('[UniMind] granted:', granted);
   if (granted) {
     showPage();
     return;
   }
 
   token = await getAuth();
+  console.log('[UniMind] token present:', !!token);
 
   if (!token) {
     showOverlay(buildLoginHTML());
@@ -342,6 +345,7 @@ hidePageInstantly();
   }
 
   currentQuestion = await fetchQuestion();
+  console.log('[UniMind] question result:', currentQuestion);
 
   if (currentQuestion === 'unauthorized') {
     showOverlay(buildSessionExpiredHTML());
@@ -358,4 +362,4 @@ hidePageInstantly();
   startedAt = Date.now();
   showOverlay(buildQuestionHTML(currentQuestion));
   attachOverlayHandlers();
-})().catch(() => showPage());
+})().catch((e) => { console.error('[UniMind] fatal:', e); showPage(); });
