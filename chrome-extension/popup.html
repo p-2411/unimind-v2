@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniMind</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      background: #07080a;
+      color: #dce1ea;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #1c2029;
+    }
+
+    .logo {
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #7cff6b;
+    }
+
+    .status {
+      font-family: monospace;
+      font-size: 10px;
+      color: #5a6474;
+      letter-spacing: 0.1em;
+    }
+
+    section {
+      padding: 14px 16px;
+      border-bottom: 1px solid #1c2029;
+    }
+
+    .section-title {
+      font-family: monospace;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #5a6474;
+      margin-bottom: 10px;
+    }
+
+    .site-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .site-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      background: #0e1014;
+    }
+
+    .site-name {
+      font-family: monospace;
+      font-size: 12px;
+      color: #9aa3b2;
+    }
+
+    .toggle {
+      appearance: none;
+      width: 30px;
+      height: 16px;
+      background: #1c2029;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      background: #5a6474;
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle:checked {
+      background: #7cff6b22;
+    }
+
+    .toggle:checked::after {
+      transform: translateX(14px);
+      background: #7cff6b;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #5a6474;
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 14px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .remove-btn:hover {
+      color: #ff6b8a;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #0e1014;
+      border: 1px solid #1c2029;
+      color: #dce1ea;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]::placeholder {
+      color: #5a6474;
+    }
+
+    input[type="text"]:focus {
+      border-color: #7cff6b44;
+    }
+
+    button.add-btn {
+      padding: 7px 12px;
+      background: #7cff6b;
+      border: none;
+      color: #07080a;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button.add-btn:hover {
+      background: #a0ff93;
+    }
+
+    .footer {
+      padding: 10px 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .open-link {
+      font-family: monospace;
+      font-size: 10px;
+      color: #5a6474;
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.15s;
+    }
+
+    .open-link:hover {
+      color: #7cff6b;
+    }
+
+    .empty {
+      font-size: 12px;
+      color: #5a6474;
+      text-align: center;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">UniMind</span>
+    <span class="status" id="status">checking...</span>
+  </div>
+
+  <section>
+    <div class="section-title">Default blocked sites</div>
+    <div class="site-list" id="defaults-list"></div>
+  </section>
+
+  <section>
+    <div class="section-title">Custom sites</div>
+    <div class="site-list" id="custom-list">
+      <div class="empty" id="custom-empty">None added yet</div>
+    </div>
+    <div class="add-row">
+      <input type="text" id="add-input" placeholder="example.com" />
+      <button class="add-btn" id="add-btn">Add</button>
+    </div>
+  </section>
+
+  <div class="footer">
+    <a class="open-link" href="http://localhost:3000" target="_blank">Open UniMind ↗</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

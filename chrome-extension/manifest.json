@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "UniMind",
+  "version": "1.0.0",
+  "description": "Answer a study question before visiting distracting sites.",
+  "permissions": ["storage", "cookies", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "UniMind"
+  }
+}

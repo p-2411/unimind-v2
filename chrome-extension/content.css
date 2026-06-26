@@ -1,0 +1,223 @@
+/* UniMind extension overlay */
+
+#unimind-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07080a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.um-card {
+  width: min(600px, 92vw);
+  background: #0e1014;
+  border: 1px solid #1c2029;
+  padding: 32px;
+  position: relative;
+}
+
+.um-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #7cff6b, #5cc8ff, transparent);
+  animation: um-scan 2s ease-out forwards;
+  transform-origin: left;
+}
+
+@keyframes um-scan {
+  from { transform: scaleX(0); opacity: 1; }
+  to   { transform: scaleX(1); opacity: 0.7; }
+}
+
+.um-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.um-logo {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7cff6b;
+}
+
+.um-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.um-topic {
+  font-size: 11px;
+  color: #5a6474;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.um-diff {
+  font-size: 10px;
+  font-family: monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid;
+}
+
+.um-diff-easy  { color: #7cff6b; border-color: #7cff6b33; }
+.um-diff-medium{ color: #ffb86b; border-color: #ffb86b33; }
+.um-diff-hard  { color: #ff6b8a; border-color: #ff6b8a33; }
+
+.um-prompt {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5a6474;
+  font-family: monospace;
+  margin: 0 0 16px;
+}
+
+.um-question {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #dce1ea;
+  margin: 0 0 28px;
+  font-weight: 400;
+}
+
+.um-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.um-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 13px 16px;
+  background: transparent;
+  border: 1px solid #1c2029;
+  color: #dce1ea;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+
+.um-choice:hover:not(:disabled) {
+  border-color: #7cff6b55;
+  background: #7cff6b08;
+}
+
+.um-choice:disabled {
+  opacity: 0.5;
+}
+
+.um-choice-label {
+  flex-shrink: 0;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7cff6b;
+  min-width: 18px;
+}
+
+.um-choice-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #9aa3b2;
+}
+
+/* Result screen */
+
+.um-result {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: monospace;
+  margin-bottom: 16px;
+}
+
+.um-result-correct { color: #7cff6b; }
+.um-result-wrong   { color: #ff6b8a; }
+
+.um-answer-label {
+  font-size: 13px;
+  color: #9aa3b2;
+  margin: 0 0 12px;
+}
+
+.um-answer-label strong {
+  color: #dce1ea;
+}
+
+.um-explanation {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #9aa3b2;
+  border-left: 2px solid #1c2029;
+  padding-left: 14px;
+  margin: 0 0 28px;
+}
+
+.um-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+
+.um-btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-family: monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.um-btn-primary {
+  background: #7cff6b;
+  border-color: #7cff6b;
+  color: #07080a;
+}
+
+.um-btn-primary:hover {
+  background: #a0ff93;
+  border-color: #a0ff93;
+}
+
+.um-btn-secondary {
+  background: transparent;
+  border-color: #5cc8ff55;
+  color: #5cc8ff;
+}
+
+.um-btn-secondary:hover {
+  background: #5cc8ff11;
+}
+
+.um-btn-ghost {
+  background: transparent;
+  border-color: #1c2029;
+  color: #5a6474;
+}
+
+.um-btn-ghost:hover {
+  border-color: #2a303d;
+  color: #9aa3b2;
+}
