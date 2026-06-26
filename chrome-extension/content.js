@@ -75,11 +75,14 @@ let token = null;
 let startedAt = Date.now();
 
 function hidePageInstantly() {
-  document.documentElement.style.setProperty('visibility', 'hidden', 'important');
+  const s = document.createElement('style');
+  s.id = 'unimind-hide';
+  s.textContent = 'html{visibility:hidden!important}';
+  document.documentElement.appendChild(s);
 }
 
 function showPage() {
-  document.documentElement.style.removeProperty('visibility');
+  document.getElementById('unimind-hide')?.remove();
 }
 
 function showOverlay(content) {
