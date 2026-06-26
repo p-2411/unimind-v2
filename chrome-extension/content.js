@@ -166,6 +166,22 @@ function buildLoginHTML() {
   `;
 }
 
+function buildSessionExpiredHTML() {
+  return `
+    <div class="um-card">
+      <div class="um-header">
+        <div class="um-logo">UniMind</div>
+      </div>
+      <p class="um-prompt">Session expired</p>
+      <p class="um-question">Visit UniMind to refresh your session, then come back.</p>
+      <div class="um-actions">
+        <a class="um-btn um-btn-primary" href="${API_BASE}" target="_blank">Open UniMind</a>
+        <button class="um-btn um-btn-ghost" id="um-skip">Continue anyway</button>
+      </div>
+    </div>
+  `;
+}
+
 function buildNoQuestionsHTML() {
   return `
     <div class="um-card">
@@ -182,11 +198,13 @@ function buildNoQuestionsHTML() {
   `;
 }
 
+// Returns the question object, null (no questions), or 'unauthorized'.
 async function fetchQuestion() {
   try {
     const resp = await fetch(`${API_BASE}/api/extension/question`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (resp.status === 401) return 'unauthorized';
     if (!resp.ok) return null;
     const data = await resp.json();
     return data.question ?? null;
@@ -324,6 +342,12 @@ hidePageInstantly();
   }
 
   currentQuestion = await fetchQuestion();
+
+  if (currentQuestion === 'unauthorized') {
+    showOverlay(buildSessionExpiredHTML());
+    attachSkipHandler();
+    return;
+  }
 
   if (!currentQuestion) {
     showOverlay(buildNoQuestionsHTML());
