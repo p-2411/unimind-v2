@@ -2,36 +2,11 @@ import { SidebarTrigger } from "~/components/ui/sidebar";
 import { api } from "~/trpc/server";
 import { TRPCError } from "@trpc/server";
 
-// Filler data for anonymous aggregate stats — replace with real queries when wiring up analytics
-const FILLER_DAILY = [
-  { day: "Mon", attempts: 34 },
-  { day: "Tue", attempts: 58 },
-  { day: "Wed", attempts: 91 },
-  { day: "Thu", attempts: 47 },
-  { day: "Fri", attempts: 73 },
-  { day: "Sat", attempts: 22 },
-  { day: "Sun", attempts: 61 },
-];
-
-const FILLER_TOP_TOPICS = [
-  { name: "MIPS Basics", attempts: 312, accuracy: 71 },
-  { name: "Integer Representations", attempts: 287, accuracy: 64 },
-  { name: "Bit Manipulation", attempts: 241, accuracy: 68 },
-  { name: "MIPS Control Flow", attempts: 198, accuracy: 59 },
-  { name: "Floating Point Representation", attempts: 154, accuracy: 52 },
-];
-
-const FILLER_DIFFICULTY = [
-  { label: "Easy", count: 1840, accuracy: 82 },
-  { label: "Medium", count: 1203, accuracy: 67 },
-  { label: "Hard", count: 721, accuracy: 48 },
-];
-
 export default async function AdminPage() {
   try {
     const data = await api.admin.stats();
 
-    const maxAttempts = Math.max(...FILLER_DAILY.map((d) => d.attempts));
+    const maxAttempts = Math.max(...data.daily.map((d) => d.attempts), 1);
 
     return (
       <div className="min-h-svh bg-[color:var(--color-void)] text-[color:var(--color-fg)]">
@@ -188,12 +163,9 @@ export default async function AdminPage() {
 
           {/* ── Anonymous aggregate stats ── */}
           <div className="mt-8 border-t border-[color:var(--color-rule)] pt-6">
-            <div className="mb-4 flex items-center gap-3">
+            <div className="mb-4">
               <span className="font-mono text-[13px] font-semibold tracking-tight text-[color:var(--color-fg)]">
                 Anonymous Aggregates
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-amber)]">
-                filler
               </span>
             </div>
 
@@ -203,7 +175,7 @@ export default async function AdminPage() {
                 <SectionHead title="Activity This Week" hint="questions answered" />
                 <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-4 py-5">
                   <div className="flex h-24 items-end gap-2">
-                    {FILLER_DAILY.map((d) => (
+                    {data.daily.map((d) => (
                       <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
                         <div
                           className="w-full bg-[color:var(--color-cyan)] opacity-80 transition-all"
@@ -227,7 +199,7 @@ export default async function AdminPage() {
                 <SectionHead title="Top Topics" hint="by attempts" />
                 <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
                   <ul className="divide-y divide-[color:var(--color-rule)]">
-                    {FILLER_TOP_TOPICS.map((t, i) => (
+                    {data.topTopics.map((t, i) => (
                       <li key={t.name} className="flex items-center gap-3 px-4 py-2.5">
                         <span className="w-4 shrink-0 font-mono text-[11px] tabular-nums text-[color:var(--color-fg-mute)]">
                           {i + 1}
@@ -248,7 +220,7 @@ export default async function AdminPage() {
               <section className="term-rise col-span-12 lg:col-span-3" style={{ animationDelay: "180ms" }}>
                 <SectionHead title="By Difficulty" hint="accuracy" />
                 <div className="mt-3 space-y-px border border-[color:var(--color-rule)]">
-                  {FILLER_DIFFICULTY.map((d) => {
+                  {data.difficulty.map((d) => {
                     const color =
                       d.accuracy >= 75
                         ? "var(--color-phosphor)"

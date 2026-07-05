@@ -17,6 +17,10 @@ export const adminRouter = createTRPCRouter({
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
     const [
       totalUsers,
       newUsersToday,
@@ -25,6 +29,9 @@ export const adminRouter = createTRPCRouter({
       correctAttempts,
       recentUsers,
       courses,
+      dailyRaw,
+      topTopicsRaw,
+      difficultyRaw,
     ] = await Promise.all([
       ctx.db.user.count(),
       ctx.db.user.count({ where: { createdAt: { gte: startOfToday } } }),
@@ -56,6 +63,29 @@ export const adminRouter = createTRPCRouter({
           },
         },
       }),
+      ctx.db.$queryRaw<{ day: Date; attempts: bigint }[]>`
+        SELECT DATE("answeredAt") AS day, COUNT(*) AS attempts
+        FROM "question_attempts"
+        WHERE "answeredAt" >= ${sevenDaysAgo}
+        GROUP BY DATE("answeredAt")
+        ORDER BY day ASC
+      `,
+      ctx.db.$queryRaw<{ topicId: string; attempts: bigint; correct: bigint }[]>`
+        SELECT "topicId", COUNT(*) AS attempts,
+               SUM(CASE WHEN "isCorrect" THEN 1 ELSE 0 END) AS correct
+        FROM "question_attempts"
+        GROUP BY "topicId"
+        ORDER BY attempts DESC
+        LIMIT 5
+      `,
+      ctx.db.$queryRaw<{ difficulty: number; attempts: bigint; correct: bigint }[]>`
+        SELECT q.difficulty, COUNT(*) AS attempts,
+               SUM(CASE WHEN qa."isCorrect" THEN 1 ELSE 0 END) AS correct
+        FROM "question_attempts" qa
+        JOIN "questions" q ON q.id = qa."questionId"
+        GROUP BY q.difficulty
+        ORDER BY q.difficulty ASC
+      `,
     ]);
 
     const accuracy =
@@ -69,6 +99,46 @@ export const adminRouter = createTRPCRouter({
           ? Math.round(mastery.reduce((a, b) => a + b, 0) / mastery.length)
           : null;
       return { id: c.id, name: c.name, enrolled: c._count.userCourses, attempts, avgMastery };
+    });
+
+    // Fill all 7 days, including days with zero attempts
+    const dailyMap = new Map(
+      dailyRaw.map((r) => [r.day.toISOString().slice(0, 10), Number(r.attempts)]),
+    );
+    const daily = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const key = d.toISOString().slice(0, 10);
+      return {
+        day: d.toLocaleDateString("en-AU", { weekday: "short" }),
+        attempts: dailyMap.get(key) ?? 0,
+      };
+    });
+
+    // Join top topics with topic names
+    const topicNames = await ctx.db.topic.findMany({
+      where: { id: { in: topTopicsRaw.map((t) => t.topicId) } },
+      select: { id: true, name: true },
+    });
+    const topicNameMap = new Map(topicNames.map((t) => [t.id, t.name]));
+    const topTopics = topTopicsRaw.map((t) => ({
+      name: topicNameMap.get(t.topicId) ?? t.topicId,
+      attempts: Number(t.attempts),
+      accuracy: Number(t.attempts) > 0
+        ? Math.round((Number(t.correct) / Number(t.attempts)) * 100)
+        : 0,
+    }));
+
+    const difficultyLabels = ["Easy", "Medium", "Hard"] as const;
+    const difficulty = ([1, 2, 3] as const).map((d) => {
+      const row = difficultyRaw.find((r) => Number(r.difficulty) === d);
+      return {
+        label: difficultyLabels[d - 1],
+        count: row ? Number(row.attempts) : 0,
+        accuracy: row && Number(row.attempts) > 0
+          ? Math.round((Number(row.correct) / Number(row.attempts)) * 100)
+          : 0,
+      };
     });
 
     return {
@@ -85,6 +155,9 @@ export const adminRouter = createTRPCRouter({
         courseCount: u._count.userCourses,
       })),
       courses: courseStats,
+      daily,
+      topTopics,
+      difficulty,
     };
   }),
 });
