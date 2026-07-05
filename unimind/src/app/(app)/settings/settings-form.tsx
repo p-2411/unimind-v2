@@ -249,6 +249,37 @@ export function SettingsForm({
     setWeekOverride.mutate({ courseId, week: next });
   }
 
+  // Blocked sites
+  const DEFAULT_BLOCKED = [
+    'youtube.com', 'reddit.com', 'instagram.com', 'twitter.com',
+    'x.com', 'tiktok.com', 'facebook.com', 'netflix.com', 'twitch.tv',
+  ];
+  const { data: blockedData, refetch: refetchBlocked } = api.user.blockedSites.useQuery();
+  const updateBlocked = api.user.updateBlockedSites.useMutation({ onSuccess: () => void refetchBlocked() });
+  const [customInput, setCustomInput] = useState("");
+
+  const disabledDefaults = blockedData?.disabledDefaults ?? [];
+  const customBlocked = blockedData?.customBlocked ?? [];
+
+  function toggleDefault(domain: string, enabled: boolean) {
+    const next = enabled
+      ? disabledDefaults.filter((d) => d !== domain)
+      : [...new Set([...disabledDefaults, domain])];
+    updateBlocked.mutate({ disabledDefaults: next, customBlocked });
+  }
+
+  function removeCustom(domain: string) {
+    updateBlocked.mutate({ disabledDefaults, customBlocked: customBlocked.filter((d) => d !== domain) });
+  }
+
+  function addCustom() {
+    const domain = customInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] ?? '';
+    if (!domain || domain.length < 3 || !domain.includes('.')) return;
+    if (customBlocked.includes(domain) || DEFAULT_BLOCKED.includes(domain)) { setCustomInput(""); return; }
+    updateBlocked.mutate({ disabledDefaults, customBlocked: [...customBlocked, domain] });
+    setCustomInput("");
+  }
+
   // Feedback
   const [activeForm, setActiveForm] = useState<"bug" | "suggestion" | "general" | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -492,6 +523,84 @@ export function SettingsForm({
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Blocked Sites */}
+      <section className="term-rise mt-10" style={{ animationDelay: "210ms" }}>
+        <SectionHead title="Extension — Blocked Sites" />
+        <div className="space-y-px border border-[color:var(--color-rule)]">
+          {/* Defaults */}
+          {DEFAULT_BLOCKED.map((domain) => {
+            const enabled = !disabledDefaults.includes(domain);
+            return (
+              <div
+                key={domain}
+                className="flex items-center gap-3 bg-[color:var(--color-panel)] px-4 py-2.5"
+              >
+                <button
+                  onClick={() => toggleDefault(domain, !enabled)}
+                  disabled={updateBlocked.isPending}
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center border transition-colors ${
+                    enabled
+                      ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
+                      : "border-[color:var(--color-rule-hi)] text-transparent"
+                  }`}
+                >
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </button>
+                <span
+                  className={`flex-1 font-mono text-[12px] ${
+                    enabled ? "text-[color:var(--color-fg)]" : "text-[color:var(--color-fg-mute)] line-through"
+                  }`}
+                >
+                  {domain}
+                </span>
+              </div>
+            );
+          })}
+
+          {/* Custom sites */}
+          {customBlocked.map((domain) => (
+            <div
+              key={domain}
+              className="flex items-center gap-3 bg-[color:var(--color-panel)] px-4 py-2.5"
+            >
+              <div className="flex h-4 w-4 shrink-0 items-center justify-center border border-[color:var(--color-cyan)] bg-[color:var(--color-cyan)] text-[color:var(--color-void)]">
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </div>
+              <span className="flex-1 font-mono text-[12px] text-[color:var(--color-fg)]">{domain}</span>
+              <button
+                onClick={() => removeCustom(domain)}
+                disabled={updateBlocked.isPending}
+                className="font-mono text-[14px] text-[color:var(--color-fg-mute)] transition-colors hover:text-[color:var(--color-red)]"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add custom site */}
+        <div className="mt-2 flex gap-2">
+          <input
+            type="text"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") addCustom(); }}
+            placeholder="e.g. twitch.tv"
+            className="flex-1 border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] px-3 py-2 font-mono text-[12px] text-[color:var(--color-fg)] outline-none transition-colors placeholder:text-[color:var(--color-fg-mute)]/50 focus:border-[color:var(--color-phosphor)]"
+          />
+          <button
+            onClick={addCustom}
+            disabled={updateBlocked.isPending || !customInput.trim()}
+            className="border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-void)] uppercase transition-colors hover:bg-[color:var(--color-phosphor)]/90 disabled:cursor-not-allowed disabled:border-[color:var(--color-rule)] disabled:bg-transparent disabled:text-[color:var(--color-fg-mute)]"
+          >
+            Add
+          </button>
+        </div>
+        <p className="mt-1.5 font-mono text-[10px] text-[color:var(--color-fg-mute)]">
+          Changes sync to the extension when you next open the popup.
+        </p>
       </section>
 
       {/* Feedback */}
