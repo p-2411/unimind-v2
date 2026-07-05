@@ -318,22 +318,18 @@ function attachSkipHandler() {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-hidePageInstantly();
-
 (async () => {
   const blocked = await getBlockedList();
   console.log('[UniMind] hostname:', getHostname(), '| blocked:', blocked);
-  if (!isBlocked(getHostname(), blocked)) {
-    showPage();
-    return;
-  }
+  if (!isBlocked(getHostname(), blocked)) return;
 
   const granted = await checkGranted();
   console.log('[UniMind] granted:', granted);
-  if (granted) {
-    showPage();
-    return;
-  }
+  if (granted) return;
+
+  // Only hide AFTER confirming this page needs blocking.
+  // Delaying avoids injecting DOM nodes before the host page's React hydrates.
+  hidePageInstantly();
 
   token = await getAuth();
   console.log('[UniMind] token present:', !!token);
