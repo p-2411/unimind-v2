@@ -184,6 +184,29 @@ export const userRouter = createTRPCRouter({
     };
   }),
 
+  blockedSites: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { disabledDefaults: true, customBlocked: true },
+    });
+    return {
+      disabledDefaults: user?.disabledDefaults ?? [],
+      customBlocked: user?.customBlocked ?? [],
+    };
+  }),
+
+  updateBlockedSites: protectedProcedure
+    .input(z.object({
+      disabledDefaults: z.array(z.string()),
+      customBlocked: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { disabledDefaults: input.disabledDefaults, customBlocked: input.customBlocked },
+      });
+    }),
+
   me: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.session.user.id },

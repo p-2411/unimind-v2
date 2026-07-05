@@ -20,8 +20,10 @@ model User {
   id        String   @id @db.Uuid
   email     String   @unique
   name      String?
-  image     String?
-  createdAt DateTime @default(now())
+  image            String?
+  disabledDefaults String[] @default([])
+  customBlocked    String[] @default([])
+  createdAt        DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   userCourses UserCourse[]      @relation("UserCourseEnrollments")
@@ -30,6 +32,7 @@ model User {
   topics      UserTopic[]
   questions   UserQuestion[]
   attempts    QuestionAttempt[]
+  feedback    Feedback[]
 
   @@map("users")
 }
@@ -197,6 +200,19 @@ model Admin {
   createdAt DateTime @default(now())
 
   @@map("admins")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?  @db.Uuid
+  type      String   // "bug" | "suggestion" | "general"
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("feedback")
 }
 
 // ============================================
