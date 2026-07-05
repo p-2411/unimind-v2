@@ -12,74 +12,139 @@ const DEFAULTS = [
 
 const API_BASE = 'http://localhost:3000';
 
-async function loadStorage() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get({ customBlocked: [], disabledDefaults: [] }, resolve);
-  });
-}
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
-async function saveStorage(data) {
-  return new Promise((resolve) => {
-    chrome.storage.sync.set(data, resolve);
-  });
-}
-
-async function getAuth() {
+async function getToken() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
       const { unimindToken, unimindTokenExpiry } = data;
       if (!unimindToken) { resolve(null); return; }
-      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) {
-        resolve(null);
-        return;
-      }
+      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) { resolve(null); return; }
       resolve(unimindToken);
     });
   });
 }
 
-function renderDefaults(disabledDefaults) {
+// ── Remote sync ───────────────────────────────────────────────────────────────
+
+async function fetchRemote(token) {
+  try {
+    const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+let saveTimer = null;
+
+async function saveRemote(token, disabledDefaults, customBlocked) {
+  showSaving(true);
+  // Write to local cache immediately so content.js picks it up
+  chrome.storage.local.set({ cachedDisabledDefaults: disabledDefaults, cachedCustomBlocked: customBlocked });
+
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await fetch(`${API_BASE}/api/extension/blocked-sites`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disabledDefaults, customBlocked }),
+      });
+    } catch { /* silent */ }
+    showSaving(false);
+  }, 600);
+}
+
+function showSaving(show) {
+  const el = document.getElementById('saving');
+  if (el) el.classList.toggle('show', show);
+}
+
+// ── Fallback local storage (when not logged in) ───────────────────────────────
+
+function loadLocal() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(
+      { cachedDisabledDefaults: [], cachedCustomBlocked: [] },
+      (d) => resolve({ disabledDefaults: d.cachedDisabledDefaults, customBlocked: d.cachedCustomBlocked }),
+    );
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let state = { disabledDefaults: [], customBlocked: [] };
+let token = null;
+
+function onChange(newState) {
+  state = newState;
+  if (token) {
+    saveRemote(token, state.disabledDefaults, state.customBlocked);
+  } else {
+    chrome.storage.local.set({ cachedDisabledDefaults: state.disabledDefaults, cachedCustomBlocked: state.customBlocked });
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderDefaults() {
   const list = document.getElementById('defaults-list');
   list.innerHTML = '';
   DEFAULTS.forEach((domain) => {
+    const enabled = !state.disabledDefaults.includes(domain);
     const row = document.createElement('div');
-    row.className = 'site-row';
+    row.className = `site-row${enabled ? '' : ' disabled'}`;
 
     const name = document.createElement('span');
     name.className = 'site-name';
     name.textContent = domain;
 
-    const toggle = document.createElement('input');
-    toggle.type = 'checkbox';
-    toggle.className = 'toggle';
-    toggle.checked = !disabledDefaults.includes(domain);
-    toggle.addEventListener('change', async () => {
-      const data = await loadStorage();
-      if (toggle.checked) {
-        data.disabledDefaults = data.disabledDefaults.filter((d) => d !== domain);
+    const label = document.createElement('label');
+    label.className = 'pill';
+    label.title = enabled ? 'Click to disable' : 'Click to enable';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = enabled;
+    input.addEventListener('change', () => {
+      const next = { ...state };
+      if (input.checked) {
+        next.disabledDefaults = next.disabledDefaults.filter((d) => d !== domain);
       } else {
-        data.disabledDefaults = [...new Set([...data.disabledDefaults, domain])];
+        next.disabledDefaults = [...new Set([...next.disabledDefaults, domain])];
       }
-      await saveStorage({ disabledDefaults: data.disabledDefaults });
+      onChange(next);
+      renderDefaults();
     });
 
+    const track = document.createElement('div');
+    track.className = 'pill-track';
+    const thumb = document.createElement('div');
+    thumb.className = 'pill-thumb';
+
+    label.appendChild(input);
+    label.appendChild(track);
+    label.appendChild(thumb);
+
     row.appendChild(name);
-    row.appendChild(toggle);
+    row.appendChild(label);
     list.appendChild(row);
   });
 }
 
-function renderCustom(customBlocked) {
+function renderCustom() {
   const list = document.getElementById('custom-list');
-  const empty = document.getElementById('custom-empty');
   list.innerHTML = '';
-
-  if (customBlocked.length === 0) {
+  if (state.customBlocked.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No custom sites yet';
     list.appendChild(empty);
     return;
   }
-
-  customBlocked.forEach((domain) => {
+  state.customBlocked.forEach((domain) => {
     const row = document.createElement('div');
     row.className = 'site-row';
 
@@ -87,57 +152,71 @@ function renderCustom(customBlocked) {
     name.className = 'site-name';
     name.textContent = domain;
 
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
-    removeBtn.textContent = '×';
-    removeBtn.title = 'Remove';
-    removeBtn.addEventListener('click', async () => {
-      const data = await loadStorage();
-      data.customBlocked = data.customBlocked.filter((d) => d !== domain);
-      await saveStorage({ customBlocked: data.customBlocked });
-      renderCustom(data.customBlocked);
+    const btn = document.createElement('button');
+    btn.className = 'remove-btn';
+    btn.textContent = '×';
+    btn.title = 'Remove';
+    btn.addEventListener('click', () => {
+      onChange({ ...state, customBlocked: state.customBlocked.filter((d) => d !== domain) });
+      renderCustom();
     });
 
     row.appendChild(name);
-    row.appendChild(removeBtn);
+    row.appendChild(btn);
     list.appendChild(row);
   });
 }
 
-async function init() {
-  const data = await loadStorage();
-  renderDefaults(data.disabledDefaults);
-  renderCustom(data.customBlocked);
+// ── Add domain ────────────────────────────────────────────────────────────────
 
-  // Auth status
-  const token = await getAuth();
-  const status = document.getElementById('status');
-  status.textContent = token ? 'logged in' : 'not logged in';
-  status.style.color = token ? '#7cff6b' : '#ff6b8a';
+function normaliseDomain(raw) {
+  return raw.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] ?? '';
+}
 
-  // Add custom domain
+function setupAdd() {
   const input = document.getElementById('add-input');
-  const addBtn = document.getElementById('add-btn');
+  const btn = document.getElementById('add-btn');
 
-  function addDomain() {
-    const raw = input.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-    if (!raw || raw.length < 3 || !raw.includes('.')) return;
-    loadStorage().then(async (data) => {
-      if (data.customBlocked.includes(raw) || DEFAULTS.includes(raw)) {
-        input.value = '';
-        return;
-      }
-      data.customBlocked = [...data.customBlocked, raw];
-      await saveStorage({ customBlocked: data.customBlocked });
-      renderCustom(data.customBlocked);
+  function add() {
+    const domain = normaliseDomain(input.value);
+    if (!domain || domain.length < 3 || !domain.includes('.')) return;
+    if (state.customBlocked.includes(domain) || DEFAULTS.includes(domain)) {
       input.value = '';
-    });
+      return;
+    }
+    onChange({ ...state, customBlocked: [...state.customBlocked, domain] });
+    renderCustom();
+    input.value = '';
   }
 
-  addBtn.addEventListener('click', addDomain);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') addDomain();
-  });
+  btn.addEventListener('click', add);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  token = await getToken();
+
+  const dot = document.getElementById('status-dot');
+  if (dot) { dot.classList.add(token ? 'ok' : 'err'); }
+
+  if (token) {
+    const remote = await fetchRemote(token);
+    if (remote) {
+      state = { disabledDefaults: remote.disabledDefaults, customBlocked: remote.customBlocked };
+      // Update local cache
+      chrome.storage.local.set({ cachedDisabledDefaults: state.disabledDefaults, cachedCustomBlocked: state.customBlocked });
+    } else {
+      state = await loadLocal();
+    }
+  } else {
+    state = await loadLocal();
+  }
+
+  renderDefaults();
+  renderCustom();
+  setupAdd();
 }
 
 document.addEventListener('DOMContentLoaded', init);

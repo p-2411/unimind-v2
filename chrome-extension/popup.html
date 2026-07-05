@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UniMind</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      width: 320px;
+      width: 300px;
       background: #07080a;
       color: #dce1ea;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -20,201 +19,204 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px 12px;
+      padding: 13px 14px 11px;
       border-bottom: 1px solid #1c2029;
     }
 
     .logo {
       font-family: monospace;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.22em;
+      letter-spacing: 0.24em;
       text-transform: uppercase;
       color: #7cff6b;
     }
 
-    .status {
-      font-family: monospace;
-      font-size: 10px;
-      color: #5a6474;
-      letter-spacing: 0.1em;
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2a3040;
     }
+    .status-dot.ok { background: #7cff6b; }
+    .status-dot.err { background: #ff6b8a; }
 
-    section {
-      padding: 14px 16px;
-      border-bottom: 1px solid #1c2029;
-    }
-
-    .section-title {
+    .section-label {
       font-family: monospace;
-      font-size: 10px;
-      letter-spacing: 0.22em;
+      font-size: 9px;
+      letter-spacing: 0.24em;
       text-transform: uppercase;
-      color: #5a6474;
-      margin-bottom: 10px;
+      color: #3a4250;
+      padding: 10px 14px 6px;
     }
 
     .site-list {
       display: flex;
       flex-direction: column;
-      gap: 1px;
     }
 
     .site-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 7px 10px;
-      background: #0e1014;
+      gap: 8px;
+      padding: 7px 14px;
+      border-bottom: 1px solid #111318;
+      transition: background 0.1s;
     }
+    .site-row:hover { background: #0c0e12; }
 
     .site-name {
+      flex: 1;
       font-family: monospace;
       font-size: 12px;
       color: #9aa3b2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+    .site-row.disabled .site-name { color: #3a4250; text-decoration: line-through; }
 
-    .toggle {
-      appearance: none;
-      width: 30px;
-      height: 16px;
+    /* pill toggle */
+    .pill {
+      position: relative;
+      width: 28px;
+      height: 15px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .pill input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .pill-track {
+      position: absolute;
+      inset: 0;
       background: #1c2029;
       border-radius: 8px;
-      cursor: pointer;
-      position: relative;
-      transition: background 0.2s;
-      flex-shrink: 0;
+      transition: background 0.18s;
     }
-
-    .toggle::after {
-      content: '';
+    .pill input:checked ~ .pill-track { background: #7cff6b22; border: 1px solid #7cff6b44; }
+    .pill-thumb {
       position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 12px;
-      height: 12px;
-      background: #5a6474;
+      top: 2px; left: 2px;
+      width: 11px; height: 11px;
+      background: #3a4250;
       border-radius: 50%;
-      transition: transform 0.2s, background 0.2s;
+      transition: transform 0.18s, background 0.18s;
     }
-
-    .toggle:checked {
-      background: #7cff6b22;
-    }
-
-    .toggle:checked::after {
-      transform: translateX(14px);
-      background: #7cff6b;
-    }
+    .pill input:checked ~ .pill-thumb { transform: translateX(13px); background: #7cff6b; }
 
     .remove-btn {
       background: none;
       border: none;
-      color: #5a6474;
+      color: #2a3040;
       cursor: pointer;
-      padding: 2px 4px;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1;
-      transition: color 0.15s;
+      padding: 1px 3px;
+      transition: color 0.12s;
+      flex-shrink: 0;
     }
-
-    .remove-btn:hover {
-      color: #ff6b8a;
-    }
+    .remove-btn:hover { color: #ff6b8a; }
 
     .add-row {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 6px;
+      padding: 10px 14px 12px;
     }
 
     input[type="text"] {
       flex: 1;
-      background: #0e1014;
+      background: #0c0e12;
       border: 1px solid #1c2029;
       color: #dce1ea;
       font-family: monospace;
       font-size: 12px;
-      padding: 7px 10px;
+      padding: 6px 9px;
       outline: none;
       transition: border-color 0.15s;
+      min-width: 0;
     }
+    input[type="text"]::placeholder { color: #2a3040; }
+    input[type="text"]:focus { border-color: #7cff6b44; }
 
-    input[type="text"]::placeholder {
-      color: #5a6474;
-    }
-
-    input[type="text"]:focus {
-      border-color: #7cff6b44;
-    }
-
-    button.add-btn {
-      padding: 7px 12px;
+    .add-btn {
+      padding: 6px 11px;
       background: #7cff6b;
       border: none;
       color: #07080a;
       font-family: monospace;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.08em;
       cursor: pointer;
-      transition: background 0.15s;
+      flex-shrink: 0;
+      transition: background 0.12s;
     }
-
-    button.add-btn:hover {
-      background: #a0ff93;
-    }
+    .add-btn:hover { background: #a0ff93; }
+    .add-btn:disabled { background: #1c2029; color: #3a4250; cursor: not-allowed; }
 
     .footer {
-      padding: 10px 16px;
+      padding: 9px 14px;
+      border-top: 1px solid #111318;
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .open-link {
       font-family: monospace;
-      font-size: 10px;
-      color: #5a6474;
+      font-size: 9px;
+      color: #3a4250;
       text-decoration: none;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.12s;
+    }
+    .open-link:hover { color: #7cff6b; }
+
+    .saving {
+      font-family: monospace;
+      font-size: 9px;
+      color: #3a4250;
       letter-spacing: 0.1em;
-      transition: color 0.15s;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .saving.show { opacity: 1; }
+
+    .divider {
+      height: 1px;
+      background: #1c2029;
+      margin: 2px 0;
     }
 
-    .open-link:hover {
-      color: #7cff6b;
-    }
-
-    .empty {
-      font-size: 12px;
-      color: #5a6474;
-      text-align: center;
-      padding: 8px 0;
+    .empty-state {
+      font-family: monospace;
+      font-size: 11px;
+      color: #2a3040;
+      padding: 8px 14px 6px;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <span class="logo">UniMind</span>
-    <span class="status" id="status">checking...</span>
+    <div class="status-dot" id="status-dot"></div>
   </div>
 
-  <section>
-    <div class="section-title">Default blocked sites</div>
-    <div class="site-list" id="defaults-list"></div>
-  </section>
+  <div class="section-label">Default sites</div>
+  <div class="site-list" id="defaults-list"></div>
 
-  <section>
-    <div class="section-title">Custom sites</div>
-    <div class="site-list" id="custom-list">
-      <div class="empty" id="custom-empty">None added yet</div>
-    </div>
-    <div class="add-row">
-      <input type="text" id="add-input" placeholder="example.com" />
-      <button class="add-btn" id="add-btn">Add</button>
-    </div>
-  </section>
+  <div class="divider"></div>
+
+  <div class="section-label">Custom sites</div>
+  <div class="site-list" id="custom-list"></div>
+  <div class="add-row">
+    <input type="text" id="add-input" placeholder="e.g. twitch.tv" />
+    <button class="add-btn" id="add-btn">Add</button>
+  </div>
 
   <div class="footer">
-    <a class="open-link" href="http://localhost:3000" target="_blank">Open UniMind ↗</a>
+    <a class="open-link" href="http://localhost:3000/settings" id="settings-link" target="_blank">Settings ↗</a>
+    <span class="saving" id="saving">saving…</span>
   </div>
 
   <script src="popup.js"></script>

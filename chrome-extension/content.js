@@ -25,9 +25,9 @@ function isBlocked(hostname, blocked) {
 
 async function getBlockedList() {
   return new Promise((resolve) => {
-    chrome.storage.sync.get({ customBlocked: [], disabledDefaults: [] }, (data) => {
-      const enabled = DEFAULT_BLOCKED.filter((d) => !data.disabledDefaults.includes(d));
-      resolve([...enabled, ...data.customBlocked]);
+    chrome.storage.local.get({ cachedDisabledDefaults: [], cachedCustomBlocked: [] }, (data) => {
+      const enabled = DEFAULT_BLOCKED.filter((d) => !data.cachedDisabledDefaults.includes(d));
+      resolve([...enabled, ...data.cachedCustomBlocked]);
     });
   });
 }
