@@ -1,5 +1,6 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const API_BASE = 'http://localhost:3000';
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes per domain
 
 const DEFAULT_BLOCKED = [
   'youtube.com',
@@ -57,6 +58,26 @@ async function checkGranted() {
 async function grantTab() {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'GRANT_TAB' }, () => resolve());
+  });
+}
+
+async function checkDomainCooldown(hostname) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('domainGrants', (data) => {
+      const grants = data.domainGrants ?? {};
+      const expiresAt = grants[hostname];
+      resolve(!!expiresAt && Date.now() < expiresAt);
+    });
+  });
+}
+
+async function grantDomain(hostname) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('domainGrants', (data) => {
+      const grants = data.domainGrants ?? {};
+      grants[hostname] = Date.now() + COOLDOWN_MS;
+      chrome.storage.local.set({ domainGrants: grants }, resolve);
+    });
   });
 }
 
@@ -282,6 +303,7 @@ function attachOverlayHandlers() {
       if (continueBtn) {
         continueBtn.addEventListener('click', async () => {
           if (isCorrect) await grantTab();
+          await grantDomain(getHostname());
           overlayEl.remove();
           overlayEl = null;
           showPage();
@@ -326,6 +348,9 @@ function attachSkipHandler() {
   const granted = await checkGranted();
   console.log('[UniMind] granted:', granted);
   if (granted) return;
+
+  const cooledDown = await checkDomainCooldown(getHostname());
+  if (cooledDown) return;
 
   // Only hide AFTER confirming this page needs blocking.
   // Delaying avoids injecting DOM nodes before the host page's React hydrates.
