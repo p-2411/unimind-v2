@@ -32,7 +32,9 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthPage =
-    pathname === "/login" || pathname === "/signup";
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password";
   const isAuthApi = pathname.startsWith("/auth");
   const isExtensionApi = pathname.startsWith("/api/extension");
 

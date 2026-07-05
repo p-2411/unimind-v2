@@ -68,6 +68,14 @@ export default function LoginPage() {
           autoComplete="current-password"
           placeholder="••••••••"
         />
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--color-fg-mute)] transition-colors hover:text-[color:var(--color-phosphor)]"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <AuthError message={error} />
         <AuthSubmit isPending={isSubmitting} loadingText="Logging in…">
           Log in
