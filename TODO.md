@@ -17,8 +17,7 @@
 
 | # | Task | Notes |
 |---|------|-------|
-| 5 | Flashcard view in web app | One question per page, answer before next appears |
-| 6 | Live user counter | Badge only visible past 100 users |
+| 5 | Live user counter | Badge only visible past 100 users |
 | 7 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
 
 ---
@@ -47,7 +46,7 @@ Currently on Supabase **session pooler** (port 5432). Fine for now. Options when
 
 ## Done
 
-- [x] Chrome extension — blocks YouTube, Reddit, Instagram etc., requires study question to continue
+- [x] Chrome extension — blocks YouTube, Reddit, Instagram etc., requires study question (flashcard) to continue
 - [x] Extension auth — auth-bridge.js syncs session from UniMind app via /api/extension/token
 - [x] Extension API routes — /api/extension/question + /api/extension/answer (Bearer token auth, full FSRS pipeline)
 - [x] Dashboard — courses covered + topics covered all-time tiles
