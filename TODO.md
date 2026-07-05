@@ -12,9 +12,9 @@
 
 ### 🟡 Settings (incomplete)
 
-- [ ] Avatar upload — needs Supabase Storage bucket, signed URL upload, store URL on `User` model
+- [x] Avatar upload — Supabase Storage `avatars` bucket, POST /api/avatar, updates `User.image`, shown in settings
 - [ ] Notifications — daily study reminder (web push or email cron); toggle exists in settings but is a placeholder
-- [ ] Feedback forms — "report a bug", "suggest a question", "general feedback" all say coming soon; wire up to email / Linear / DB table
+- [x] Feedback forms — inline expanding forms in settings, stored in `Feedback` table, visible in admin page
 
 ---
 
@@ -28,10 +28,16 @@
 
 ### ⚪ Nice to have
 
-- [ ] Live user counter — visible on landing page past 100 users
 - [ ] Extension popup — make add/remove blocked sites more obvious (currently works but feels hidden)
 - [ ] Dumb mode — hide YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m / 1h / 2h / ∞)
 - [ ] Assessment-weighted course selection on paywall — prioritise courses with nearest assessment date
+
+---
+
+### 🏗️ Infrastructure (get off Supabase)
+
+- [ ] **DB → Neon** — swap `DATABASE_URL` to Neon serverless Postgres; no pausing, same Prisma setup, half a day of work. Do this first.
+- [ ] **Auth → self-hosted** — replace Supabase Auth with Better-Auth or Lucia; covers sign-up, login, sessions, email. Do this after launch.
 
 ---
 

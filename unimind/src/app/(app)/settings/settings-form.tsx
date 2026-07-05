@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -9,6 +9,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -121,6 +122,31 @@ export function SettingsForm({
 }) {
   const { supabase } = useSupabase();
 
+  // Avatar
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.image);
+  const [avatarPending, setAvatarPending] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = "";
+    if (!file) return;
+    setAvatarPending(true);
+    setAvatarError(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/avatar", { method: "POST", body: form });
+    const json = (await res.json()) as { url?: string; error?: string };
+    setAvatarPending(false);
+    if (!res.ok || !json.url) {
+      setAvatarError(json.error ?? "Upload failed.");
+      return;
+    }
+    setAvatarUrl(json.url);
+  }
+
   // Account
   const [name, setName] = useState(user.name);
   const [nameSaved, setNameSaved] = useState(false);
@@ -223,6 +249,25 @@ export function SettingsForm({
     setWeekOverride.mutate({ courseId, week: next });
   }
 
+  // Feedback
+  const [activeForm, setActiveForm] = useState<"bug" | "suggestion" | "general" | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState<string | null>(null);
+  const submitFeedback = api.feedback.submit.useMutation({
+    onSuccess: () => {
+      setFeedbackSent(activeForm);
+      setActiveForm(null);
+      setFeedbackMessage("");
+      setTimeout(() => setFeedbackSent(null), 3000);
+    },
+  });
+
+  function handleFeedbackClick(type: "bug" | "suggestion" | "general") {
+    if (activeForm === type) { setActiveForm(null); setFeedbackMessage(""); return; }
+    setActiveForm(type);
+    setFeedbackMessage("");
+  }
+
   // Danger zone
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -233,14 +278,45 @@ export function SettingsForm({
         <SectionHead title="Account" />
         <div className="space-y-4">
           <Field label="Avatar">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] font-mono text-[16px] text-[color:var(--color-phosphor)]">
-                {name[0]?.toUpperCase() ?? "?"}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt="Avatar"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center font-mono text-[16px] text-[color:var(--color-phosphor)]">
+                      {name[0]?.toUpperCase() ?? "?"}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarPending}
+                  className="inline-flex items-center gap-2 border border-[color:var(--color-rule-hi)] px-3 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-soft)] uppercase transition-colors hover:border-[color:var(--color-fg-soft)] disabled:opacity-50"
+                >
+                  <Upload className="h-3 w-3" />
+                  {avatarPending ? "Uploading…" : "Upload"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </div>
-              <button className="inline-flex items-center gap-2 border border-[color:var(--color-rule-hi)] px-3 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-soft)] uppercase transition-colors hover:border-[color:var(--color-fg-soft)]">
-                <Upload className="h-3 w-3" />
-                Upload
-              </button>
+              {avatarError && (
+                <p className="font-mono text-[11px] text-[color:var(--color-red)]">{avatarError}</p>
+              )}
+              <p className="font-mono text-[10px] text-[color:var(--color-fg-mute)]">
+                JPEG · PNG · WebP · max 2 MB
+              </p>
             </div>
           </Field>
           <Field label="Name">
@@ -425,19 +501,52 @@ export function SettingsForm({
       >
         <SectionHead title="Feedback" />
         <div className="space-y-3">
-          {["Report a bug", "Suggest a question", "General feedback"].map(
-            (label) => (
+          {(
+            [
+              { label: "Report a bug", type: "bug" },
+              { label: "Suggest a question", type: "suggestion" },
+              { label: "General feedback", type: "general" },
+            ] as const
+          ).map(({ label, type }) => (
+            <div key={type} className="border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]">
               <button
-                key={label}
-                className="w-full border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] px-4 py-3 text-left font-sans text-[13px] text-[color:var(--color-fg-soft)] transition-colors hover:border-[color:var(--color-fg-soft)] hover:text-[color:var(--color-fg)]"
+                onClick={() => handleFeedbackClick(type)}
+                className="w-full px-4 py-3 text-left font-sans text-[13px] text-[color:var(--color-fg-soft)] transition-colors hover:text-[color:var(--color-fg)]"
               >
-                {label}{" "}
-                <span className="ml-2 font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase">
-                  coming soon
-                </span>
+                {feedbackSent === type ? (
+                  <span className="text-[color:var(--color-phosphor)]">✓ Sent — thanks!</span>
+                ) : (
+                  label
+                )}
               </button>
-            ),
-          )}
+              {activeForm === type && (
+                <div className="border-t border-[color:var(--color-rule)] px-4 pb-4 pt-3">
+                  <textarea
+                    value={feedbackMessage}
+                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                    placeholder={
+                      type === "bug"
+                        ? "Describe the bug and what you were doing when it happened…"
+                        : type === "suggestion"
+                          ? "What question would you like to see added?"
+                          : "Anything on your mind…"
+                    }
+                    rows={4}
+                    className="w-full resize-none border border-[color:var(--color-rule-hi)] bg-[color:var(--color-void)] px-3 py-2 font-sans text-[13px] text-[color:var(--color-fg)] outline-none transition-colors placeholder:text-[color:var(--color-fg-mute)]/60 focus:border-[color:var(--color-phosphor)]"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => submitFeedback.mutate({ type, message: feedbackMessage })}
+                      disabled={!feedbackMessage.trim() || submitFeedback.isPending}
+                      className="border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-4 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-void)] uppercase transition-colors hover:bg-[color:var(--color-phosphor)]/90 disabled:cursor-not-allowed disabled:border-[color:var(--color-rule)] disabled:bg-transparent disabled:text-[color:var(--color-fg-mute)]"
+                    >
+                      {submitFeedback.isPending ? "Sending…" : "Send"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
