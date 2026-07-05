@@ -18,6 +18,7 @@ export default async function SettingsPage() {
     enrolled: enrolledIds.has(c.id),
     startDate: c.startDate?.toISOString() ?? null,
     weekOverride: weekOverrides.get(c.id) ?? null,
+    flexWeeks: c.flexWeeks,
   }));
 
   return (

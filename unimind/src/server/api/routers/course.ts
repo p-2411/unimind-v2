@@ -16,6 +16,7 @@ export const courseRouter = createTRPCRouter({
         color: true,
         icon: true,
         startDate: true,
+        flexWeeks: true,
       },
     }),
   ),

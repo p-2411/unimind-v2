@@ -9,18 +9,21 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
 import { useSupabase } from "~/components/providers/supabase-provider";
 import { useRouter } from "next/navigation";
 
 type User = RouterOutputs["user"]["me"];
-type Course = { id: string; name: string; enrolled: boolean; startDate: string | null; weekOverride: number | null };
+type Course = { id: string; name: string; enrolled: boolean; startDate: string | null; weekOverride: number | null; flexWeeks: number[] };
 
-function courseWeek(startDate: string | null): number {
+function courseWeek(startDate: string | null, flexWeeks: number[] = []): number {
   if (!startDate) return 1;
   const ms = Date.now() - new Date(startDate).getTime();
-  return Math.max(1, Math.floor(ms / (7 * 24 * 60 * 60 * 1000)) + 1);
+  const calWeek = Math.max(1, Math.floor(ms / (7 * 24 * 60 * 60 * 1000)) + 1);
+  const flexPassed = flexWeeks.filter((w) => w <= calWeek).length;
+  return Math.max(1, calWeek - flexPassed);
 }
 
 function SectionHead({ title }: { title: string }) {
@@ -214,7 +217,7 @@ export function SettingsForm({
 
   function adjustWeek(courseId: string, delta: number) {
     const course = courses.find((c) => c.id === courseId);
-    const current = weekOverrides[courseId] ?? courseWeek(course?.startDate ?? null);
+    const current = weekOverrides[courseId] ?? courseWeek(course?.startDate ?? null, course?.flexWeeks);
     const next = Math.max(1, current + delta);
     setWeekOverrides((prev) => ({ ...prev, [courseId]: next }));
     setWeekOverride.mutate({ courseId, week: next });
@@ -269,6 +272,12 @@ export function SettingsForm({
               onChange={setCurrentPassword}
               placeholder="••••••••"
             />
+            <Link
+              href="/forgot-password"
+              className="mt-1 inline-block font-mono text-[10px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase transition-colors hover:text-[color:var(--color-phosphor)]"
+            >
+              Forgot it?
+            </Link>
           </Field>
           <Field label="New">
             <Input
@@ -364,7 +373,7 @@ export function SettingsForm({
                       <ChevronDown className="h-3 w-3" />
                     </button>
                     <span className="w-6 text-center font-mono text-[13px] text-[color:var(--color-phosphor)] tabular-nums">
-                      {weekOverrides[course.id] ?? courseWeek(course.startDate)}
+                      {weekOverrides[course.id] ?? courseWeek(course.startDate, course.flexWeeks)}
                     </span>
                     <button
                       onClick={() => adjustWeek(course.id, 1)}
@@ -374,7 +383,7 @@ export function SettingsForm({
                     </button>
                   </div>
                   {weekOverrides[course.id] !== undefined &&
-                    weekOverrides[course.id] !== courseWeek(course.startDate) && (
+                    weekOverrides[course.id] !== courseWeek(course.startDate, course.flexWeeks) && (
                     <span className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-amber)] uppercase">
                       override
                     </span>

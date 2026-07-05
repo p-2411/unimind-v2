@@ -29,6 +29,7 @@ async function main() {
         color: course.color,
         icon: course.icon,
         startDate: course.startDate ? new Date(course.startDate) : null,
+        flexWeeks: course.flexWeeks ?? [],
       },
     });
   }

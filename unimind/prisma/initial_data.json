@@ -11,7 +11,10 @@
       "description": "Introduces how computer systems are structured — covering MIPS assembly, integer and floating point representations, file systems, and concurrency.",
       "startDate": "2026-06-01T00:00:00.000Z",
       "color": "#00d4ff",
-      "icon": "cpu"
+      "icon": "cpu",
+      "flexWeeks": [
+        6
+      ]
     }
   ],
   "topics": [

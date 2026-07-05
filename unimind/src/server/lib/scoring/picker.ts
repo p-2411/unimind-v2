@@ -33,7 +33,14 @@ export async function pickNextQuestionId(
       OR c."startDate" IS NULL
       OR t."weekNumber" <= COALESCE(
         uc."currentWeekOverride",
-        GREATEST(1, FLOOR(EXTRACT(EPOCH FROM (NOW() - c."startDate")) / 604800)::int + 1)
+        GREATEST(1,
+          (FLOOR(EXTRACT(EPOCH FROM (NOW() - c."startDate")) / 604800)::int + 1)
+          - (
+            SELECT COUNT(*)::int
+            FROM unnest(c."flexWeeks") AS fw(wk)
+            WHERE fw.wk <= (FLOOR(EXTRACT(EPOCH FROM (NOW() - c."startDate")) / 604800)::int + 1)
+          )
+        )
       )
     ORDER BY uq."due" ASC NULLS FIRST, q.id ASC
     LIMIT 1;

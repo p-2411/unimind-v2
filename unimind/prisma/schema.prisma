@@ -215,7 +215,8 @@ model Course {
   topics      Topic[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
-  startDate DateTime?
+  startDate   DateTime?
+  flexWeeks   Int[]        @default([]) // Calendar week numbers with no new content (e.g. [6] for UNSW T2)
 
   @@map("courses")
 }
