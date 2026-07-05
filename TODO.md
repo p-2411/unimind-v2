@@ -1,44 +1,46 @@
-# UniMind — TODO
+# UniMind TODO
 
 ---
 
-## Pre-launch blockers
+### 🔴 Pre-launch
 
-| # | Task | Notes |
-|---|------|-------|
-| 1 | Forgot password flow | Link on `/login` → Supabase password reset email |
-| 2 | Extension question cooldown | Show question once every 30 mins per domain, not every reload |
-| 3 | Extension: update `API_BASE` + `UNIMIND_URL` to prod domain before publishing | Currently hardcoded to `localhost:3000` |
-| 4 | Deploy web app | Vercel or similar |
+- [x] Extension question cooldown — 30 min per domain stored in `chrome.storage.local`; only correct answers grant the cooldown
+- [ ] Extension: swap `localhost:3000` → prod domain before publishing (`API_BASE` + `UNIMIND_URL` in content.js + auth-bridge.js)
+- [ ] Deploy web app — Vercel or similar
 
 ---
 
-## Nice to have (post-launch or soon)
+### 🟡 Settings (incomplete)
 
-| # | Task | Notes |
-|---|------|-------|
-| 5 | Live user counter | Badge only visible past 100 users |
-| 6 | Extension popup — manage blocked sites | Make add/remove sites obvious; no redirect needed |
-| 7 | Dumb mode | Hides YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m/1h/2h/∞) |
-| 8 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
+- [ ] Avatar upload — needs Supabase Storage bucket, signed URL upload, store URL on `User` model
+- [ ] Notifications — daily study reminder (web push or email cron); toggle exists in settings but is a placeholder
+- [ ] Feedback forms — "report a bug", "suggest a question", "general feedback" all say coming soon; wire up to email / Linear / DB table
 
 ---
 
-## Later
+### 🟡 Social
 
-| # | Task | Notes |
-|---|------|-------|
-| 8 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
-| 9 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
+- [ ] Friend connections — opt-in, send/accept requests, no public followers (Whoop-style)
+- [ ] Compare stats with friends — head-to-head streak, level, XP, topic mastery on demand
+- [ ] Study groups — named group (e.g. "COMP1521 T2"), members see each other's stats
 
 ---
 
-## Scaling (revisit before launch)
+### ⚪ Nice to have
 
-Currently on Supabase **session pooler** (port 5432). Fine for now. Options when load grows:
+- [ ] Live user counter — visible on landing page past 100 users
+- [ ] Extension popup — make add/remove blocked sites more obvious (currently works but feels hidden)
+- [ ] Dumb mode — hide YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m / 1h / 2h / ∞)
+- [ ] Assessment-weighted course selection on paywall — prioritise courses with nearest assessment date
 
-- **Transaction pooler** (port 6543) — needs interactive `$transaction` removed from `question.answer`
-- **Neon HTTP driver** — no persistent connections, great for serverless; no interactive transactions
+---
+
+### ⚙️ Scaling (revisit before launch)
+
+Currently on Supabase **session pooler** (port 5432). Fine for now.
+
+- Switch to **transaction pooler** (port 6543) — needs interactive `$transaction` removed from `question.answer` first
+- Or **Neon HTTP driver** — no persistent connections, serverless-friendly, no interactive transactions
 - Set `connection_limit` in `DATABASE_URL` once concurrency is known
 - Add slow-query logging before scaling
 
@@ -46,19 +48,20 @@ Currently on Supabase **session pooler** (port 5432). Fine for now. Options when
 
 ---
 
-## Done
+### ✅ Done
 
-- [x] Chrome extension — blocks YouTube, Reddit, Instagram etc., requires study question (flashcard) to continue
-- [x] Extension auth — auth-bridge.js syncs session from UniMind app via /api/extension/token
-- [x] Extension API routes — /api/extension/question + /api/extension/answer (Bearer token auth, full FSRS pipeline)
-- [x] Dashboard — courses covered + topics covered all-time tiles
-- [x] Admin page — real user/course/accuracy stats, aggregate analytics, gated by `admins` table
-- [x] COMP1521 T2 2026 seeded — 8 topics, 37 subtopics, 333 questions (AI-generated, difficulty 1–3)
-- [x] Week-based question filtering in `picker.ts` — only surfaces topics ≤ current week
-- [x] Week override in settings — persists to `UserCourse.currentWeekOverride`, used by picker
-- [x] Progress page — streak, level, XP, topic mastery (real data + AI overview, non-blocking Suspense)
-- [x] Progress page topics grouped by course, with subtopic breakdown
-- [x] Settings page — name, password, enroll/unenroll, delete account (all real)
+- [x] Flex week support — `flexWeeks Int[]` on `Course`; picker SQL and settings `courseWeek()` subtract passed flex weeks from calendar week (COMP1521 T2 2026: week 6)
+- [x] Forgot password — `/forgot-password`, `/auth/confirm`, `/reset-password`; link on login + settings
+- [x] Chrome extension — blocks YouTube, Reddit, Instagram etc., flashcard overlay to unlock
+- [x] Extension auth — auth-bridge.js syncs session via `/api/extension/token` (same-origin)
+- [x] Extension API routes — `/api/extension/question` + `/api/extension/answer` (Bearer token, full FSRS pipeline)
+- [x] Dashboard tiles — courses covered + topics covered (all-time)
+- [x] Admin page — real user/course/accuracy stats, gated by `admins` table
+- [x] COMP1521 T2 2026 seeded — 8 topics, 37 subtopics, 333 questions
+- [x] Week-based question filtering — only surfaces topics ≤ current week
+- [x] Week override in settings — persists to `UserCourse.currentWeekOverride`
+- [x] Progress page — streak, level, XP, topic mastery with subtopic breakdown
+- [x] Settings page — name, password, enroll/unenroll, delete account
 - [x] XP, level, streak tracking wired into `question.answer`
 - [x] Difficulty-weighted mastery EMA
-- [x] Subtopic tracking — `subtopicId` on `QuestionAttempt`, subtopic breakdown on progress page
+- [x] Subtopic tracking — `subtopicId` on `QuestionAttempt`, breakdown on progress page
