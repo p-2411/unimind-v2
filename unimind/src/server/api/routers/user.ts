@@ -8,7 +8,6 @@ import { readMastery } from "~/server/lib/scoring";
 import { env } from "~/env";
 
 const CALIBRATION_THRESHOLD = 10;
-const TOPICS_COVERED_WINDOW_DAYS = 7;
 
 export const userRouter = createTRPCRouter({
   count: publicProcedure.query(async ({ ctx }) => {
@@ -19,7 +18,7 @@ export const userRouter = createTRPCRouter({
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    const [userStats, userTopics] = await Promise.all([
+    const [userStats, userTopics, attemptedTopics] = await Promise.all([
       ctx.db.userStats.findUnique({ where: { userId } }),
       ctx.db.userTopic.findMany({
         where: { userId },
@@ -33,16 +32,15 @@ export const userRouter = createTRPCRouter({
           lastAnsweredAt: true,
         },
       }),
+      ctx.db.topic.findMany({
+        where: { userTopics: { some: { userId } } },
+        select: { courseId: true },
+      }),
     ]);
-
-    const weekAgo = new Date(
-      Date.now() - TOPICS_COVERED_WINDOW_DAYS * 86_400_000,
-    );
 
     const now = new Date();
     let totalAnswers = 0;
     let scoreSum = 0;
-    let topicsCoveredThisWeek = 0;
     for (const t of userTopics) {
       totalAnswers += t.totalCount;
       scoreSum += readMastery({
@@ -50,16 +48,14 @@ export const userRouter = createTRPCRouter({
         updatedAt: t.masteryUpdatedAt,
         now,
       });
-      if (t.lastAnsweredAt && t.lastAnsweredAt >= weekAgo) {
-        topicsCoveredThisWeek += 1;
-      }
     }
-    const topicsStarted = userTopics.length;
+    const topicsCovered = userTopics.length;
+    const coursesCovered = new Set(attemptedTopics.map((t) => t.courseId)).size;
 
     const accuracy =
-      totalAnswers < CALIBRATION_THRESHOLD || topicsStarted === 0
+      totalAnswers < CALIBRATION_THRESHOLD || topicsCovered === 0
         ? null
-        : Math.round(scoreSum / topicsStarted);
+        : Math.round(scoreSum / topicsCovered);
 
     const topicMastery = userTopics
       .map((t) => ({
@@ -79,8 +75,8 @@ export const userRouter = createTRPCRouter({
       .slice(0, 6);
 
     return {
-      topicsStarted,
-      topicsCoveredThisWeek,
+      topicsCovered,
+      coursesCovered,
       totalAnswers,
       accuracy,
       currentStreak: userStats?.currentStreak ?? 0,

@@ -30,16 +30,16 @@ export default async function Dashboard() {
 
   const tiles = [
     {
-      label: "Topics started",
-      value: String(stats.topicsStarted),
-      delta: stats.topicsStarted === 0 ? "—" : "all-time",
+      label: "Courses covered",
+      value: String(stats.coursesCovered),
+      delta: stats.coursesCovered === 0 ? "—" : "all-time",
       tone: "fg" as const,
       icon: null,
     },
     {
       label: "Topics covered",
-      value: String(stats.topicsCoveredThisWeek),
-      delta: "last 7 days",
+      value: String(stats.topicsCovered),
+      delta: stats.topicsCovered === 0 ? "—" : "all-time",
       tone: "fg" as const,
       icon: null,
     },
