@@ -18,7 +18,9 @@
 | # | Task | Notes |
 |---|------|-------|
 | 5 | Live user counter | Badge only visible past 100 users |
-| 7 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
+| 6 | Extension popup — manage blocked sites | Make add/remove sites obvious; no redirect needed |
+| 7 | Dumb mode | Hides YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m/1h/2h/∞) |
+| 8 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
 
 ---
 
