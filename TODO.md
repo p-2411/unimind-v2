@@ -2,31 +2,33 @@
 
 ---
 
-## Now (blocks other work)
+## Pre-launch blockers
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | Flashcard view | One question per page, answer before next appears |
+| 1 | Forgot password flow | Link on `/login` → Supabase password reset email |
+| 2 | Extension question cooldown | Show question once every 30 mins per domain, not every reload |
+| 3 | Extension: update `API_BASE` + `UNIMIND_URL` to prod domain before publishing | Currently hardcoded to `localhost:3000` |
+| 4 | Deploy web app | Vercel or similar |
 
 ---
 
-## Next (can start anytime)
+## Nice to have (post-launch or soon)
 
 | # | Task | Notes |
 |---|------|-------|
-| 2 | Wire real data into admin aggregate stats | Replace filler in `FILLER_DAILY`, `FILLER_TOP_TOPICS`, `FILLER_DIFFICULTY` with real DB queries |
-| 3 | Live user counter | Badge only visible past 100 users |
-| 4 | Chrome extension | Paywall interceptor |
+| 5 | Flashcard view in web app | One question per page, answer before next appears |
+| 6 | Live user counter | Badge only visible past 100 users |
+| 7 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
 
 ---
 
-## Later (post-launch)
+## Later
 
 | # | Task | Notes |
 |---|------|-------|
-| 5 | Assessment-weighted paywall course selection | Prioritise courses with nearest assessment date |
-| 6 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
-| 7 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
+| 8 | Survey 4-grade self-rate UX | May simplify to binary on paywall surface if too much friction |
+| 9 | `QuestionAttempt` cascade on Topic delete | Consider `Restrict` or `SetNull` to preserve audit log |
 
 ---
 
@@ -45,7 +47,11 @@ Currently on Supabase **session pooler** (port 5432). Fine for now. Options when
 
 ## Done
 
-- [x] Admin page — real user/course/accuracy stats + gated by `admins` table
+- [x] Chrome extension — blocks YouTube, Reddit, Instagram etc., requires study question to continue
+- [x] Extension auth — auth-bridge.js syncs session from UniMind app via /api/extension/token
+- [x] Extension API routes — /api/extension/question + /api/extension/answer (Bearer token auth, full FSRS pipeline)
+- [x] Dashboard — courses covered + topics covered all-time tiles
+- [x] Admin page — real user/course/accuracy stats, aggregate analytics, gated by `admins` table
 - [x] COMP1521 T2 2026 seeded — 8 topics, 37 subtopics, 333 questions (AI-generated, difficulty 1–3)
 - [x] Week-based question filtering in `picker.ts` — only surfaces topics ≤ current week
 - [x] Week override in settings — persists to `UserCourse.currentWeekOverride`, used by picker
