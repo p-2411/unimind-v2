@@ -23,43 +23,29 @@ function isBlocked(hostname, blocked) {
   return blocked.some((domain) => hostname === domain || hostname.endsWith('.' + domain));
 }
 
-const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
-
-function blockedListFromCache(disabledDefaults, customBlocked) {
+function blockedListFromData(disabledDefaults, customBlocked) {
   const enabled = DEFAULT_BLOCKED.filter((d) => !disabledDefaults.includes(d));
   return [...enabled, ...customBlocked];
 }
 
-// Returns blocked list, fetching from API if token is available and cache is stale.
+// Always fetches from API when logged in — local storage is only a fallback.
 async function getBlockedList(authToken) {
+  if (authToken) {
+    try {
+      const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        chrome.storage.local.set({ cachedDisabledDefaults: data.disabledDefaults, cachedCustomBlocked: data.customBlocked });
+        return blockedListFromData(data.disabledDefaults, data.customBlocked);
+      }
+    } catch { /* fall through to cache */ }
+  }
   return new Promise((resolve) => {
-    chrome.storage.local.get(
-      { cachedDisabledDefaults: [], cachedCustomBlocked: [], cachedBlockedAt: 0 },
-      async (data) => {
-        const age = Date.now() - data.cachedBlockedAt;
-        if (!authToken || age < CACHE_TTL_MS) {
-          resolve(blockedListFromCache(data.cachedDisabledDefaults, data.cachedCustomBlocked));
-          return;
-        }
-        // Cache is stale — refresh from API
-        try {
-          const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          });
-          if (res.ok) {
-            const fresh = await res.json();
-            chrome.storage.local.set({
-              cachedDisabledDefaults: fresh.disabledDefaults,
-              cachedCustomBlocked: fresh.customBlocked,
-              cachedBlockedAt: Date.now(),
-            });
-            resolve(blockedListFromCache(fresh.disabledDefaults, fresh.customBlocked));
-            return;
-          }
-        } catch { /* fall through to cache */ }
-        resolve(blockedListFromCache(data.cachedDisabledDefaults, data.cachedCustomBlocked));
-      },
-    );
+    chrome.storage.local.get({ cachedDisabledDefaults: [], cachedCustomBlocked: [] }, (data) => {
+      resolve(blockedListFromData(data.cachedDisabledDefaults, data.cachedCustomBlocked));
+    });
   });
 }
 
