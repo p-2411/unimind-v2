@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { pickNextQuestionId } from "~/server/lib/scoring";
+import { shuffleChoices } from "~/server/lib/shuffle";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +39,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ question: null }, { status: 200, headers: CORS });
   }
 
-  const question = await db.question.findUnique({
+  const q = await db.question.findUnique({
     where: { id: questionId },
     select: {
       id: true,
       question: true,
       choices: true,
+      answerIndex: true,
       difficulty: true,
       topic: {
         select: { id: true, name: true, course: { select: { name: true } } },
@@ -51,6 +53,9 @@ export async function GET(req: Request) {
       subtopic: { select: { id: true, name: true } },
     },
   });
+  if (!q) return NextResponse.json({ question: null }, { status: 200, headers: CORS });
 
-  return NextResponse.json({ question }, { status: 200, headers: CORS });
+  const { choices } = shuffleChoices(q.id, q.choices, q.answerIndex);
+  const { answerIndex: _, ...rest } = { ...q, choices };
+  return NextResponse.json({ question: rest }, { status: 200, headers: CORS });
 }

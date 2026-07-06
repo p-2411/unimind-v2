@@ -8,6 +8,7 @@ import {
   applyMastery,
   pickNextQuestionId,
 } from "~/server/lib/scoring";
+import { shuffleChoices } from "~/server/lib/shuffle";
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
@@ -76,7 +77,7 @@ export const questionRouter = createTRPCRouter({
     const questionId = await pickNextQuestionId(ctx.db, userId);
     if (!questionId) return null;
 
-    return ctx.db.question.findUnique({
+    const q = await ctx.db.question.findUnique({
       where: { id: questionId },
       select: {
         id: true,
@@ -91,6 +92,9 @@ export const questionRouter = createTRPCRouter({
         subtopic: { select: { id: true, name: true } },
       },
     });
+    if (!q) return null;
+    const { choices, answerIndex } = shuffleChoices(q.id, q.choices, q.answerIndex);
+    return { ...q, choices, answerIndex };
   }),
 
   nextForPaywall: protectedProcedure.query(async ({ ctx }) => {
@@ -99,12 +103,13 @@ export const questionRouter = createTRPCRouter({
     if (!questionId) return null;
 
     // Paywall response shape: NO answerIndex, NO explanation pre-answer.
-    return ctx.db.question.findUnique({
+    const q = await ctx.db.question.findUnique({
       where: { id: questionId },
       select: {
         id: true,
         question: true,
         choices: true,
+        answerIndex: true,
         difficulty: true,
         topic: {
           select: { id: true, name: true, course: { select: { name: true } } },
@@ -112,6 +117,10 @@ export const questionRouter = createTRPCRouter({
         subtopic: { select: { id: true, name: true } },
       },
     });
+    if (!q) return null;
+    const { choices } = shuffleChoices(q.id, q.choices, q.answerIndex);
+    const { answerIndex: _removed, ...rest } = { ...q, choices };
+    return rest;
   }),
 
   answer: protectedProcedure
@@ -138,6 +147,7 @@ export const questionRouter = createTRPCRouter({
           id: true,
           topicId: true,
           subtopicId: true,
+          choices: true,
           answerIndex: true,
           explanation: true,
           topic: { select: { name: true } },
@@ -151,7 +161,12 @@ export const questionRouter = createTRPCRouter({
         });
       }
 
-      const isCorrect = input.choiceIndex === question.answerIndex;
+      const { answerIndex: shuffledAnswerIndex } = shuffleChoices(
+        question.id,
+        question.choices,
+        question.answerIndex,
+      );
+      const isCorrect = input.choiceIndex === shuffledAnswerIndex;
       const now = new Date();
       const today = new Date(now);
       today.setUTCHours(0, 0, 0, 0);

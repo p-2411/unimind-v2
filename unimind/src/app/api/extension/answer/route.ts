@@ -5,6 +5,7 @@ import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { applyAnswer, applyMastery } from "~/server/lib/scoring";
+import { shuffleChoices } from "~/server/lib/shuffle";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
       id: true,
       topicId: true,
       subtopicId: true,
+      choices: true,
       answerIndex: true,
       explanation: true,
       topic: { select: { name: true } },
@@ -73,7 +75,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Question not found" }, { status: 404, headers: CORS });
   }
 
-  const isCorrect = input.choiceIndex === question.answerIndex;
+  const { answerIndex: shuffledAnswerIndex } = shuffleChoices(
+    question.id,
+    question.choices,
+    question.answerIndex,
+  );
+  const isCorrect = input.choiceIndex === shuffledAnswerIndex;
   const now = new Date();
   const today = new Date(now);
   today.setUTCHours(0, 0, 0, 0);
@@ -259,7 +266,7 @@ export async function POST(req: Request) {
   return NextResponse.json(
     {
       isCorrect,
-      answerIndex: question.answerIndex,
+      answerIndex: shuffledAnswerIndex,
       explanation: question.explanation,
     },
     { status: 200, headers: CORS },
