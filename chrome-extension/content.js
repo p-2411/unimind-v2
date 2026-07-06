@@ -32,6 +32,20 @@ async function getBlockedList() {
   });
 }
 
+// Fetches the latest blocked list from the API, updates local cache, returns fresh list.
+async function refreshBlockedList(authToken) {
+  try {
+    const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    chrome.storage.local.set({ cachedDisabledDefaults: data.disabledDefaults, cachedCustomBlocked: data.customBlocked });
+    const enabled = DEFAULT_BLOCKED.filter((d) => !data.disabledDefaults.includes(d));
+    return [...enabled, ...data.customBlocked];
+  } catch { return null; }
+}
+
 async function getAuth() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
@@ -341,23 +355,25 @@ function attachSkipHandler() {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 (async () => {
-  const blocked = await getBlockedList();
-  console.log('[UniMind] hostname:', getHostname(), '| blocked:', blocked);
-  if (!isBlocked(getHostname(), blocked)) return;
+  const cachedBlocked = await getBlockedList();
+  if (!isBlocked(getHostname(), cachedBlocked)) return;
 
   const granted = await checkGranted();
-  console.log('[UniMind] granted:', granted);
   if (granted) return;
 
   const cooledDown = await checkDomainCooldown(getHostname());
   if (cooledDown) return;
 
-  // Only hide AFTER confirming this page needs blocking.
-  // Delaying avoids injecting DOM nodes before the host page's React hydrates.
-  hidePageInstantly();
-
+  // Page looks blocked — fetch fresh list from API to catch settings changes
+  // before committing to showing the overlay.
   token = await getAuth();
-  console.log('[UniMind] token present:', !!token);
+  if (token) {
+    const freshBlocked = await refreshBlockedList(token);
+    if (freshBlocked && !isBlocked(getHostname(), freshBlocked)) return;
+  }
+
+  // Only hide AFTER confirming this page still needs blocking.
+  hidePageInstantly();
 
   if (!token) {
     showOverlay(buildLoginHTML());
