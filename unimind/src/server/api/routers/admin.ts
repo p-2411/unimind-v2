@@ -141,6 +141,18 @@ export const adminRouter = createTRPCRouter({
       };
     });
 
+    const recentFeedback = await ctx.db.feedback.findMany({
+      take: 20,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        createdAt: true,
+        user: { select: { email: true, name: true } },
+      },
+    });
+
     return {
       totalUsers,
       newUsersToday,
@@ -158,6 +170,14 @@ export const adminRouter = createTRPCRouter({
       daily,
       topTopics,
       difficulty,
+      recentFeedback: recentFeedback.map((f) => ({
+        id: f.id,
+        type: f.type,
+        message: f.message,
+        createdAt: f.createdAt,
+        userEmail: f.user?.email ?? null,
+        userName: f.user?.name ?? null,
+      })),
     };
   }),
 });

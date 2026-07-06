@@ -250,6 +250,42 @@ export default async function AdminPage() {
               </section>
             </div>
           </div>
+
+          {/* ── Feedback ── */}
+          {data.recentFeedback.length > 0 && (
+            <div className="mt-8 border-t border-[color:var(--color-rule)] pt-6">
+              <SectionHead title="User Feedback" hint="latest 20" />
+              <ul className="mt-3 divide-y divide-[color:var(--color-rule)] border border-[color:var(--color-rule)]">
+                {data.recentFeedback.map((f) => {
+                  const tagColor =
+                    f.type === "bug"
+                      ? "var(--color-red)"
+                      : f.type === "suggestion"
+                        ? "var(--color-cyan)"
+                        : "var(--color-fg-mute)";
+                  return (
+                    <li key={f.id} className="bg-[color:var(--color-panel)] px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="font-mono text-[10px] uppercase tracking-[0.18em]"
+                          style={{ color: tagColor }}
+                        >
+                          {f.type}
+                        </span>
+                        <span className="font-sans text-[11px] text-[color:var(--color-fg-mute)]">
+                          {f.userName ?? f.userEmail ?? "anonymous"} ·{" "}
+                          {new Date(f.createdAt).toLocaleDateString("en-AU")}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-sans text-[13px] leading-snug text-[color:var(--color-fg)]">
+                        {f.message}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </main>
       </div>
     );
