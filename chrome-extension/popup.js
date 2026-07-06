@@ -41,8 +41,8 @@ let saveTimer = null;
 
 async function saveRemote(token, disabledDefaults, customBlocked) {
   showSaving(true);
-  // Write to local cache immediately so content.js picks it up
-  chrome.storage.local.set({ cachedDisabledDefaults: disabledDefaults, cachedCustomBlocked: customBlocked });
+  // Bust cache timestamp so content.js fetches fresh on next page load
+  chrome.storage.local.set({ cachedDisabledDefaults: disabledDefaults, cachedCustomBlocked: customBlocked, cachedBlockedAt: 0 });
 
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {

@@ -23,27 +23,44 @@ function isBlocked(hostname, blocked) {
   return blocked.some((domain) => hostname === domain || hostname.endsWith('.' + domain));
 }
 
-async function getBlockedList() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get({ cachedDisabledDefaults: [], cachedCustomBlocked: [] }, (data) => {
-      const enabled = DEFAULT_BLOCKED.filter((d) => !data.cachedDisabledDefaults.includes(d));
-      resolve([...enabled, ...data.cachedCustomBlocked]);
-    });
-  });
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+function blockedListFromCache(disabledDefaults, customBlocked) {
+  const enabled = DEFAULT_BLOCKED.filter((d) => !disabledDefaults.includes(d));
+  return [...enabled, ...customBlocked];
 }
 
-// Fetches the latest blocked list from the API, updates local cache, returns fresh list.
-async function refreshBlockedList(authToken) {
-  try {
-    const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
-      headers: { Authorization: `Bearer ${authToken}` },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    chrome.storage.local.set({ cachedDisabledDefaults: data.disabledDefaults, cachedCustomBlocked: data.customBlocked });
-    const enabled = DEFAULT_BLOCKED.filter((d) => !data.disabledDefaults.includes(d));
-    return [...enabled, ...data.customBlocked];
-  } catch { return null; }
+// Returns blocked list, fetching from API if token is available and cache is stale.
+async function getBlockedList(authToken) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(
+      { cachedDisabledDefaults: [], cachedCustomBlocked: [], cachedBlockedAt: 0 },
+      async (data) => {
+        const age = Date.now() - data.cachedBlockedAt;
+        if (!authToken || age < CACHE_TTL_MS) {
+          resolve(blockedListFromCache(data.cachedDisabledDefaults, data.cachedCustomBlocked));
+          return;
+        }
+        // Cache is stale — refresh from API
+        try {
+          const res = await fetch(`${API_BASE}/api/extension/blocked-sites`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          if (res.ok) {
+            const fresh = await res.json();
+            chrome.storage.local.set({
+              cachedDisabledDefaults: fresh.disabledDefaults,
+              cachedCustomBlocked: fresh.customBlocked,
+              cachedBlockedAt: Date.now(),
+            });
+            resolve(blockedListFromCache(fresh.disabledDefaults, fresh.customBlocked));
+            return;
+          }
+        } catch { /* fall through to cache */ }
+        resolve(blockedListFromCache(data.cachedDisabledDefaults, data.cachedCustomBlocked));
+      },
+    );
+  });
 }
 
 async function getAuth() {
@@ -355,8 +372,9 @@ function attachSkipHandler() {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 (async () => {
-  const cachedBlocked = await getBlockedList();
-  if (!isBlocked(getHostname(), cachedBlocked)) return;
+  token = await getAuth();
+  const blocked = await getBlockedList(token);
+  if (!isBlocked(getHostname(), blocked)) return;
 
   const granted = await checkGranted();
   if (granted) return;
@@ -364,15 +382,7 @@ function attachSkipHandler() {
   const cooledDown = await checkDomainCooldown(getHostname());
   if (cooledDown) return;
 
-  // Page looks blocked — fetch fresh list from API to catch settings changes
-  // before committing to showing the overlay.
-  token = await getAuth();
-  if (token) {
-    const freshBlocked = await refreshBlockedList(token);
-    if (freshBlocked && !isBlocked(getHostname(), freshBlocked)) return;
-  }
-
-  // Only hide AFTER confirming this page still needs blocking.
+  // Only hide AFTER confirming this page needs blocking.
   hidePageInstantly();
 
   if (!token) {
