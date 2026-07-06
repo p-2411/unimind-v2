@@ -1,4 +1,5 @@
 // ── Config ────────────────────────────────────────────────────────────────────
+const SCHOLAR_SVG = `<svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M 26,50 L 26,70 A 24,24 0 0 0 74,70 L 74,50" stroke="#7cff6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M 10,50 L 90,50" stroke="#7cff6b" stroke-width="5.5" stroke-linecap="round"/><path d="M 50,16 L 70,33 L 50,50 L 30,33 Z" stroke="#7cff6b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 70,33 L 78,54" stroke="#7cff6b" stroke-width="3" stroke-linecap="round" opacity="0.82"/><circle cx="78" cy="57" r="4" fill="#7cff6b"/></svg>`;
 const API_BASE = 'http://localhost:3000';
 const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes per domain
 
@@ -152,7 +153,7 @@ function buildQuestionHTML(q) {
   return `
     <div class="um-card">
       <div class="um-header">
-        <div class="um-logo">UniMind</div>
+        <div class="um-logo">${SCHOLAR_SVG}</div>
         <div class="um-meta">
           <span class="um-topic">${esc(q.topic.course.name)} · ${esc(q.topic.name)}</span>
           <span class="um-diff ${diffClass}">${diffLabel}</span>
@@ -170,7 +171,7 @@ function buildResultHTML(isCorrect, answerIndex, explanation, choices) {
   return `
     <div class="um-card">
       <div class="um-header">
-        <div class="um-logo">UniMind</div>
+        <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <div class="um-result ${isCorrect ? 'um-result-correct' : 'um-result-wrong'}">
         ${isCorrect ? '✓ Correct' : '✗ Incorrect'}
@@ -192,7 +193,7 @@ function buildLoginHTML() {
   return `
     <div class="um-card">
       <div class="um-header">
-        <div class="um-logo">UniMind</div>
+        <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">Log in to continue</p>
       <p class="um-question">You need to be logged in to UniMind to access blocked sites.</p>
@@ -208,7 +209,7 @@ function buildSessionExpiredHTML() {
   return `
     <div class="um-card">
       <div class="um-header">
-        <div class="um-logo">UniMind</div>
+        <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">Session expired</p>
       <p class="um-question">Visit UniMind to refresh your session, then come back.</p>
@@ -224,7 +225,7 @@ function buildNoQuestionsHTML() {
   return `
     <div class="um-card">
       <div class="um-header">
-        <div class="um-logo">UniMind</div>
+        <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">No questions available</p>
       <p class="um-question">Enroll in a course on UniMind to get practice questions.</p>
@@ -236,7 +237,23 @@ function buildNoQuestionsHTML() {
   `;
 }
 
-// Returns the question object, null (no questions), or 'unauthorized'.
+function buildFetchErrorHTML() {
+  return `
+    <div class="um-card">
+      <div class="um-header">
+        <div class="um-logo">${SCHOLAR_SVG}</div>
+      </div>
+      <p class="um-prompt">Couldn't load question</p>
+      <p class="um-question">Something went wrong fetching your question. Make sure UniMind is reachable and try again.</p>
+      <div class="um-actions">
+        <button class="um-btn um-btn-primary" id="um-retry-fetch">Try again</button>
+        <button class="um-btn um-btn-ghost" id="um-skip">Continue anyway</button>
+      </div>
+    </div>
+  `;
+}
+
+// Returns the question object, null (no questions), 'unauthorized', or 'error'.
 async function fetchQuestion() {
   try {
     const resp = await fetch(`${API_BASE}/api/extension/question`, {
@@ -244,13 +261,13 @@ async function fetchQuestion() {
     });
     console.log('[UniMind] /api/extension/question status:', resp.status);
     if (resp.status === 401) return 'unauthorized';
-    if (!resp.ok) return null;
+    if (!resp.ok) return 'error';
     const data = await resp.json();
     console.log('[UniMind] question response body:', JSON.stringify(data));
     return data.question ?? null;
   } catch (e) {
     console.error('[UniMind] fetchQuestion threw:', e);
-    return null;
+    return 'error';
   }
 }
 
@@ -331,13 +348,20 @@ function attachOverlayHandlers() {
         retryBtn.addEventListener('click', async () => {
           startedAt = Date.now();
           currentQuestion = await fetchQuestion();
-          if (!currentQuestion) {
+          if (currentQuestion === 'unauthorized') {
+            showOverlay(buildSessionExpiredHTML());
+            attachSkipHandler();
+          } else if (currentQuestion === 'error') {
+            showOverlay(buildFetchErrorHTML());
+            attachSkipHandler();
+            attachRetryFetchHandler();
+          } else if (!currentQuestion) {
             showOverlay(buildNoQuestionsHTML());
             attachSkipHandler();
-            return;
+          } else {
+            showOverlay(buildQuestionHTML(currentQuestion));
+            attachOverlayHandlers();
           }
-          showOverlay(buildQuestionHTML(currentQuestion));
-          attachOverlayHandlers();
         });
       }
     });
@@ -352,6 +376,28 @@ function attachSkipHandler() {
       overlayEl.remove();
       overlayEl = null;
       showPage();
+    });
+  }
+}
+
+function attachRetryFetchHandler() {
+  const btn = document.getElementById('um-retry-fetch');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      showOverlay(`<div class="um-card"><div class="um-header"><div class="um-logo">${SCHOLAR_SVG}</div></div><p class="um-prompt">Loading…</p></div>`);
+      currentQuestion = await fetchQuestion();
+      if (currentQuestion === 'unauthorized') {
+        showOverlay(buildSessionExpiredHTML());
+        attachSkipHandler();
+      } else if (currentQuestion === 'error' || !currentQuestion) {
+        showOverlay(buildFetchErrorHTML());
+        attachSkipHandler();
+        attachRetryFetchHandler();
+      } else {
+        startedAt = Date.now();
+        showOverlay(buildQuestionHTML(currentQuestion));
+        attachOverlayHandlers();
+      }
     });
   }
 }
@@ -383,6 +429,13 @@ function attachSkipHandler() {
   if (currentQuestion === 'unauthorized') {
     showOverlay(buildSessionExpiredHTML());
     attachSkipHandler();
+    return;
+  }
+
+  if (currentQuestion === 'error') {
+    showOverlay(buildFetchErrorHTML());
+    attachSkipHandler();
+    attachRetryFetchHandler();
     return;
   }
 
