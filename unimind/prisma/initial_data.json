@@ -5302,21 +5302,27 @@
       "name": "Assignment 1",
       "courseId": "course_comp1521",
       "date": "2026-07-05T23:59:00.000Z",
-      "description": "MIPS assembly programming (15%). Covers Weeks 1–3 content."
+      "description": "MIPS assembly programming (15%). Covers Weeks 1–3 content.",
+      "weekFrom": 1,
+      "weekTo": 3
     },
     {
       "id": "assess_a2",
       "name": "Assignment 2",
       "courseId": "course_comp1521",
       "date": "2026-08-07T23:59:00.000Z",
-      "description": "Systems programming — file I/O and concurrency (15%). Covers Weeks 7–10."
+      "description": "Systems programming — file I/O and concurrency (15%). Covers Weeks 7–10.",
+      "weekFrom": 7,
+      "weekTo": 10
     },
     {
       "id": "assess_exam",
       "name": "Final Exam",
       "courseId": "course_comp1521",
       "date": "2026-08-20T09:00:00.000Z",
-      "description": "3-hour final exam in CSE labs. Hurdle: must score ≥40% (18/45) to pass."
+      "description": "3-hour final exam in CSE labs. Hurdle: must score ≥40% (18/45) to pass.",
+      "weekFrom": null,
+      "weekTo": null
     }
   ]
 }

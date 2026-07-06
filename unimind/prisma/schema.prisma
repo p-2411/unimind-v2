@@ -310,6 +310,8 @@ model Assessment {
   courseId    String
   date        DateTime
   description String?  @db.Text
+  weekFrom    Int?
+  weekTo      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

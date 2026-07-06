@@ -92,6 +92,8 @@ async function main() {
         courseId: assessment.courseId,
         date: new Date(assessment.date),
         description: assessment.description,
+        weekFrom: assessment.weekFrom ?? null,
+        weekTo: assessment.weekTo ?? null,
       },
     });
   }
