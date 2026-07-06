@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   TrendingUp,
 } from "lucide-react";
-import { UnimindLogo } from "~/components/logo";
+import { UnimindWordmark } from "~/components/logo";
 import { useSupabase } from "~/components/providers/supabase-provider";
 import { cn } from "~/lib/utils";
 import {
@@ -40,15 +40,10 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-[color:var(--color-rule)] bg-[color:var(--color-void)]">
       <SidebarHeader>
-        <div className="flex items-center gap-2.5 px-3 pt-5 pb-3">
-          <UnimindLogo className="h-7 w-7 text-[color:var(--color-phosphor)]" />
-          <div className="leading-tight">
-            <div className="font-mono text-[15px] font-semibold tracking-tight text-[color:var(--color-fg)]">
-              Unimind
-            </div>
-            <div className="font-sans text-[10.5px] text-[color:var(--color-fg-mute)]">
-              CS practice
-            </div>
+        <div className="px-3 pt-5 pb-3">
+          <UnimindWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
+          <div className="mt-1 font-sans text-[10.5px] text-[color:var(--color-fg-mute)]">
+            CS practice
           </div>
         </div>
         <div className="mx-3 border-t border-[color:var(--color-rule)]" />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UnimindLogo } from "~/components/logo";
+import { UnimindWordmark } from "~/components/logo";
 
 type Props = {
   eyebrow: string;
@@ -20,11 +20,8 @@ export function AuthPane({
     <main className="relative flex min-h-svh items-center justify-center px-5 py-10 sm:px-10">
       <div className="w-full max-w-[440px]">
         {/* Mobile header */}
-        <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-          <UnimindLogo className="h-7 w-7 text-[color:var(--color-phosphor)]" />
-          <div className="font-mono text-[16px] font-semibold tracking-tight">
-            Unimind
-          </div>
+        <div className="mb-8 lg:hidden">
+          <UnimindWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
         </div>
 
         <div className="term-rise">
