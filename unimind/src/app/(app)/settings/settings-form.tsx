@@ -254,7 +254,7 @@ export function SettingsForm({
     'youtube.com', 'reddit.com', 'instagram.com', 'twitter.com',
     'x.com', 'tiktok.com', 'facebook.com', 'netflix.com', 'twitch.tv',
   ];
-  const { data: blockedData, refetch: refetchBlocked } = api.user.blockedSites.useQuery();
+  const { data: blockedData, refetch: refetchBlocked } = api.user.blockedSites.useQuery(undefined, { refetchOnWindowFocus: true });
   const updateBlocked = api.user.updateBlockedSites.useMutation({ onSuccess: () => void refetchBlocked() });
   const [customInput, setCustomInput] = useState("");
 
