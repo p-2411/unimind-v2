@@ -28,9 +28,10 @@
 
 ### ⚪ Nice to have
 
-- [ ] Extension popup — make add/remove blocked sites more obvious (currently works but feels hidden)
+- [x] Extension popup — blocked sites list with toggle/add/remove, synced to DB and settings page
+- [x] Extension logo — scholar mark PNG icons at 16/32/48/128px, transparent background
 - [ ] Dumb mode — hide YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m / 1h / 2h / ∞)
-- [ ] Assessment-weighted course selection on paywall — prioritise courses with nearest assessment date
+- [x] Assessment-weighted paywall — urgency tiers (≤3d / ≤7d / ≤30d), ordered by nearest assessment date, then topic within assessment's week range
 
 ---
 
