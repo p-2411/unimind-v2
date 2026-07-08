@@ -20,9 +20,7 @@
 
 ### 🟡 Social
 
-- [ ] Friend connections — opt-in, send/accept requests, no public followers (Whoop-style)
-- [ ] Compare stats with friends — head-to-head streak, level, XP, topic mastery on demand
-- [ ] Study groups — named group (e.g. "COMP1521 T2"), members see each other's stats
+- [ ] Study groups — create/join via invite code; group DM chat + member leaderboard (level, XP, streak, mastery); no feed
 
 ---
 
@@ -30,6 +28,17 @@
 
 - [ ] Walk through every file end-to-end and build a full mental model of what's happening — auth flow, tRPC routers, FSRS scheduler, picker SQL, extension messaging, everything
 - [ ] Identify parts built with Claude that aren't fully understood and refactor/rewrite them yourself
+
+---
+
+### 🎨 UI polish
+
+- [ ] **Raccoon mascot** — graduation gown + cap, expressive (happy/smug/tired states); replaces the scholar mark as the logo
+- [ ] **Rounder UI** — softer card corners, less sharp edges throughout; more approachable, less console-intimidating
+- [ ] **Flashcard micro-interactions** — shake on wrong answer, pulse/burst on correct; instant emotional feedback
+- [ ] **Level-up celebration** — modal or full-screen animation when XP threshold is hit; celebrate the win
+- [ ] **Progress animations** — XP bar fill, mastery ring, streak counter; motion throughout the app not just on events
+- [ ] **General animation pass** — page transitions, hover states, loading skeletons; polish builds trust
 
 ---
 
@@ -43,10 +52,10 @@
 
 ---
 
-### 🏗️ Infrastructure (get off Supabase)
+### 🏗️ Infrastructure (get off Supabase) — next session
 
-- [ ] **DB → Neon** — swap `DATABASE_URL` to Neon serverless Postgres; no pausing, same Prisma setup, half a day of work. Do this first.
-- [ ] **Auth → self-hosted** — replace Supabase Auth with Better-Auth or Lucia; covers sign-up, login, sessions, email. Do this after launch.
+- [ ] **DB → Neon** — swap `DATABASE_URL` to Neon serverless Postgres; no pausing, same Prisma setup. Do first.
+- [ ] **Auth → Better Auth** — replace Supabase Auth entirely; email/password, Prisma adapter, DB-backed sessions on Neon, simpler extension token flow. Do in same session as Neon.
 
 ---
 
