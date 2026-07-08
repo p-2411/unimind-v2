@@ -192,6 +192,24 @@ function setupAdd() {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
 }
 
+// ── Dumb Mode ─────────────────────────────────────────────────────────────────
+
+function setupDumbMode() {
+  const toggle = document.getElementById('dumb-toggle');
+  const row    = document.getElementById('dumb-row');
+
+  chrome.storage.local.get('dumbMode', ({ dumbMode }) => {
+    toggle.checked = !!dumbMode;
+    row.classList.toggle('on', !!dumbMode);
+  });
+
+  toggle.addEventListener('change', () => {
+    const on = toggle.checked;
+    chrome.storage.local.set({ dumbMode: on });
+    row.classList.toggle('on', on);
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -216,6 +234,7 @@ async function init() {
   renderDefaults();
   renderCustom();
   setupAdd();
+  setupDumbMode();
 }
 
 document.addEventListener('DOMContentLoaded', init);

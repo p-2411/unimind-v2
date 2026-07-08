@@ -179,6 +179,35 @@
     }
     .saving.show { opacity: 1; }
 
+    .dumb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid #1c2029;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .dumb-row.on { background: #080d08; border-bottom-color: #ffb86b22; }
+
+    .dumb-label {
+      font-family: monospace;
+      font-size: 12px;
+      color: #9aa3b2;
+      letter-spacing: 0.04em;
+    }
+    .dumb-row.on .dumb-label { color: #ffb86b; }
+
+    .dumb-sub {
+      font-family: monospace;
+      font-size: 9px;
+      color: #2a3040;
+      letter-spacing: 0.1em;
+      margin-top: 1px;
+    }
+
+    #dumb-pill input:checked ~ .pill-track { background: #ffb86b18; border: 1px solid #ffb86b44; }
+    #dumb-pill input:checked ~ .pill-thumb { background: #ffb86b; }
+
     .divider {
       height: 1px;
       background: #1c2029;
@@ -208,6 +237,18 @@
       </svg>
     </div>
     <div class="status-dot" id="status-dot"></div>
+  </div>
+
+  <div class="dumb-row" id="dumb-row">
+    <div>
+      <div class="dumb-label">Dumb Mode</div>
+      <div class="dumb-sub">Degrades distracting sites</div>
+    </div>
+    <label class="pill" id="dumb-pill">
+      <input type="checkbox" id="dumb-toggle" />
+      <div class="pill-track"></div>
+      <div class="pill-thumb"></div>
+    </label>
   </div>
 
   <div class="section-label">Default sites</div>
