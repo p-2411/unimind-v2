@@ -31,7 +31,6 @@ export default function LoginPage() {
 
   return (
     <AuthPane
-      eyebrow="Access"
       title="Welcome back."
       subtitle="Log in to pick up the streak where you left it."
       footer={

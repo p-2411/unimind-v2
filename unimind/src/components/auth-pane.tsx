@@ -2,7 +2,7 @@ import Link from "next/link";
 import { UnimindWordmark } from "~/components/logo";
 
 type Props = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
@@ -25,10 +25,12 @@ export function AuthPane({
         </div>
 
         <div className="term-rise">
-          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[color:var(--color-fg-mute)]">
-            {eyebrow}
-          </div>
-          <h1 className="mt-2 font-mono text-[36px] font-semibold leading-[1.05] tracking-tight md:text-[40px]">
+          {eyebrow && (
+            <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[color:var(--color-fg-mute)]">
+              {eyebrow}
+            </div>
+          )}
+          <h1 className="font-mono text-[36px] font-semibold leading-[1.05] tracking-tight md:text-[40px] [&:not(:first-child)]:mt-2">
             {title}
           </h1>
           {subtitle && (
