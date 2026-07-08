@@ -26,6 +26,13 @@
 
 ---
 
+### 🧠 Post-launch: take back the codebase
+
+- [ ] Walk through every file end-to-end and build a full mental model of what's happening — auth flow, tRPC routers, FSRS scheduler, picker SQL, extension messaging, everything
+- [ ] Identify parts built with Claude that aren't fully understood and refactor/rewrite them yourself
+
+---
+
 ### ⚪ Nice to have
 
 - [x] Extension popup — blocked sites list with toggle/add/remove, synced to DB and settings page
