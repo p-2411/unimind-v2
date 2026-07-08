@@ -210,14 +210,31 @@ export const userRouter = createTRPCRouter({
   me: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.session.user.id },
-      select: { name: true, image: true },
+      select: { name: true, image: true, dailyReminderEnabled: true, dailyReminderTime: true },
     });
     return {
       name: user?.name ?? "",
       email: ctx.session.user.email ?? "",
       image: user?.image ?? null,
+      dailyReminderEnabled: user?.dailyReminderEnabled ?? false,
+      dailyReminderTime: user?.dailyReminderTime ?? "09:00",
     };
   }),
+
+  updateNotificationPrefs: protectedProcedure
+    .input(z.object({
+      enabled: z.boolean(),
+      time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: {
+          dailyReminderEnabled: input.enabled,
+          ...(input.time ? { dailyReminderTime: input.time } : {}),
+        },
+      });
+    }),
 
   updateName: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))

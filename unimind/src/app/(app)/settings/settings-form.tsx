@@ -300,6 +300,20 @@ export function SettingsForm({
   }
 
   // Danger zone
+  const [reminderEnabled, setReminderEnabled] = useState(user.dailyReminderEnabled);
+  const [reminderTime, setReminderTime] = useState(user.dailyReminderTime);
+  const updateNotifPrefs = api.user.updateNotificationPrefs.useMutation();
+
+  function handleReminderToggle(enabled: boolean) {
+    setReminderEnabled(enabled);
+    updateNotifPrefs.mutate({ enabled, time: reminderTime });
+  }
+
+  function handleReminderTime(time: string) {
+    setReminderTime(time);
+    if (reminderEnabled) updateNotifPrefs.mutate({ enabled: true, time });
+  }
+
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   return (
@@ -509,19 +523,39 @@ export function SettingsForm({
       >
         <SectionHead title="Notifications" />
         <div className="border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <div className="font-sans text-[13px] text-[color:var(--color-fg)]">
                 Daily study reminder
               </div>
               <div className="mt-0.5 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
-                Coming soon
+                Delivered via the UniMind Chrome extension
               </div>
             </div>
-            <div className="border border-[color:var(--color-rule-hi)] px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
-              Soon
-            </div>
+            <button
+              onClick={() => handleReminderToggle(!reminderEnabled)}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center border transition-colors ${
+                reminderEnabled
+                  ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
+                  : "border-[color:var(--color-rule-hi)] text-transparent"
+              }`}
+            >
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </button>
           </div>
+          {reminderEnabled && (
+            <div className="mt-3 flex items-center gap-3 border-t border-[color:var(--color-rule)] pt-3">
+              <span className="font-mono text-[11px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
+                Time
+              </span>
+              <input
+                type="time"
+                value={reminderTime}
+                onChange={(e) => handleReminderTime(e.target.value)}
+                className="border border-[color:var(--color-rule-hi)] bg-[color:var(--color-void)] px-2 py-1 font-mono text-[12px] text-[color:var(--color-fg)] outline-none focus:border-[color:var(--color-phosphor)]"
+              />
+            </div>
+          )}
         </div>
       </section>
 
