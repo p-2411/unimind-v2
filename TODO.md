@@ -30,8 +30,9 @@
 
 - [x] Extension popup — blocked sites list with toggle/add/remove, synced to DB and settings page
 - [x] Extension logo — scholar mark PNG icons at 16/32/48/128px, transparent background
-- [ ] Dumb mode — hide YouTube recommendations/thumbnails, Reddit feed, Instagram explore; user picks duration (30m / 1h / 2h / ∞)
+- [x] Dumb mode — YouTube (no home feed, no sidebar, no Shorts, no comments), Instagram (redirects home/explore/reels → DMs, hides posts/stories on other pages), Reddit/Twitter/TikTok/Facebook (feed removed)
 - [x] Assessment-weighted paywall — urgency tiers (≤3d / ≤7d / ≤30d), ordered by nearest assessment date, then topic within assessment's week range
+- [ ] Force read delay — disable answer choices for 2–3s after flashcard appears so user has to read the question before clicking
 
 ---
 
