@@ -3,7 +3,7 @@
   "name": "UniMind",
   "version": "1.0.0",
   "description": "Answer a study question before visiting distracting sites.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage", "tabs", "alarms", "notifications"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "service-worker.js"
@@ -14,6 +14,19 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.instagram.com/*",
+        "*://*.reddit.com/*",
+        "*://*.twitter.com/*",
+        "*://*.x.com/*",
+        "*://*.tiktok.com/*",
+        "*://*.facebook.com/*"
+      ],
+      "js": ["dumb.js"],
+      "run_at": "document_idle"
     },
     {
       "matches": ["http://localhost:3000/*", "https://unimind.app/*"],

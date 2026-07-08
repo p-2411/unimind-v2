@@ -1,7 +1,6 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SCHOLAR_SVG = `<svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M 26,50 L 26,70 A 24,24 0 0 0 74,70 L 74,50" stroke="#7cff6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M 10,50 L 90,50" stroke="#7cff6b" stroke-width="5.5" stroke-linecap="round"/><path d="M 50,16 L 70,33 L 50,50 L 30,33 Z" stroke="#7cff6b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 70,33 L 78,54" stroke="#7cff6b" stroke-width="3" stroke-linecap="round" opacity="0.82"/><circle cx="78" cy="57" r="4" fill="#7cff6b"/></svg>`;
 const API_BASE = 'http://localhost:3000';
-const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes per domain
 
 const DEFAULT_BLOCKED = [
   'youtube.com',
@@ -52,16 +51,44 @@ async function getBlockedList(authToken) {
 
 async function getAuth() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
-      const { unimindToken, unimindTokenExpiry } = data;
-      if (!unimindToken) { resolve(null); return; }
-      // Reject if token is expired (expires_at is a Unix timestamp in seconds).
-      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) {
+    chrome.storage.local.get(
+      ['unimindToken', 'unimindTokenExpiry', 'unimindRefreshToken', 'unimindSupabaseUrl', 'unimindSupabaseAnonKey'],
+      (data) => {
+        const { unimindToken, unimindTokenExpiry, unimindRefreshToken, unimindSupabaseUrl, unimindSupabaseAnonKey } = data;
+
+        // Access token still valid.
+        if (unimindToken && (!unimindTokenExpiry || Date.now() / 1000 < unimindTokenExpiry)) {
+          resolve(unimindToken);
+          return;
+        }
+
+        // Access token expired or missing — try a silent refresh via Supabase.
+        if (unimindRefreshToken && unimindSupabaseUrl && unimindSupabaseAnonKey) {
+          fetch(`${unimindSupabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: { apikey: unimindSupabaseAnonKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: unimindRefreshToken }),
+          })
+            .then((resp) => (resp.ok ? resp.json() : null))
+            .then((session) => {
+              if (session?.access_token) {
+                chrome.storage.local.set({
+                  unimindToken: session.access_token,
+                  unimindTokenExpiry: session.expires_at,
+                  unimindRefreshToken: session.refresh_token,
+                });
+                resolve(session.access_token);
+              } else {
+                resolve(null);
+              }
+            })
+            .catch(() => resolve(null));
+          return;
+        }
+
         resolve(null);
-        return;
-      }
-      resolve(unimindToken);
-    });
+      },
+    );
   });
 }
 
@@ -75,27 +102,7 @@ async function checkGranted() {
 
 async function grantTab() {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'GRANT_TAB' }, () => resolve());
-  });
-}
-
-async function checkDomainCooldown(hostname) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('domainGrants', (data) => {
-      const grants = data.domainGrants ?? {};
-      const expiresAt = grants[hostname];
-      resolve(!!expiresAt && Date.now() < expiresAt);
-    });
-  });
-}
-
-async function grantDomain(hostname) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get('domainGrants', (data) => {
-      const grants = data.domainGrants ?? {};
-      grants[hostname] = Date.now() + COOLDOWN_MS;
-      chrome.storage.local.set({ domainGrants: grants }, resolve);
-    });
+    chrome.runtime.sendMessage({ type: 'GRANT_TAB', hostname: getHostname() }, () => resolve());
   });
 }
 
@@ -337,7 +344,6 @@ function attachOverlayHandlers() {
       if (continueBtn) {
         continueBtn.addEventListener('click', async () => {
           if (isCorrect) await grantTab();
-          await grantDomain(getHostname());
           overlayEl.remove();
           overlayEl = null;
           showPage();
@@ -410,9 +416,6 @@ function attachRetryFetchHandler() {
 
   const granted = await checkGranted();
   if (granted) return;
-
-  const cooledDown = await checkDomainCooldown(getHostname());
-  if (cooledDown) return;
 
   // Only hide AFTER confirming this page needs blocking.
   hidePageInstantly();

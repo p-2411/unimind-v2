@@ -5,10 +5,15 @@ async function sync() {
   try {
     const resp = await fetch('/api/extension/token');
     if (!resp.ok) return;
-    const { token, expiresAt } = await resp.json();
+    const { token, expiresAt, refreshToken, supabaseUrl, supabaseAnonKey, reminderEnabled, reminderTime } = await resp.json();
     chrome.storage.local.set({
       unimindToken: token ?? null,
       unimindTokenExpiry: expiresAt ?? null,
+      unimindRefreshToken: refreshToken ?? null,
+      unimindSupabaseUrl: supabaseUrl ?? null,
+      unimindSupabaseAnonKey: supabaseAnonKey ?? null,
+      notifEnabled: reminderEnabled ?? false,
+      notifTime: reminderTime ?? '09:00',
     });
   } catch {
     // App not reachable — leave existing stored value alone.
