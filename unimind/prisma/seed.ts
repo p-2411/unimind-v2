@@ -1,5 +1,23 @@
 import { PrismaClient } from "../generated/prisma";
-import initialData from "./initial_data.json";
+import initialDataRaw from "./initial_data.json";
+
+const initialData = initialDataRaw as {
+  users: { id: string; [k: string]: unknown }[];
+  userStats: {
+    id: string; userId: string; totalQuestionsAnswered: number;
+    totalCorrectAnswers: number; totalTimeSpent: number; level: number;
+    xp: number; currentStreak: number; longestStreak: number;
+    lastActiveDate: string | null;
+  }[];
+  userTopics: { id: string; userId: string; topicId: string; score: number }[];
+  courseEnrollments: { userId: string; courseId: string }[];
+  assessmentUsers: { assessmentId: string; userId: string }[];
+  courses: { id: string; name: string; description: string; color: string; icon: string; startDate: string | null; flexWeeks?: number[] }[];
+  topics: { id: string; name: string; description: string; courseId: string; weekNumber?: number | null }[];
+  subtopics: { id: string; name: string; description: string; topicId: string }[];
+  questions: { id: string; question: string; choices: string[]; answerIndex: number; explanation: string; topicId: string; subtopicId: string; difficulty: number }[];
+  assessments: { id: string; name: string; description: string; courseId: string; date: string; weekFrom?: number | null; weekTo?: number | null }[];
+};
 
 const prisma = new PrismaClient();
 

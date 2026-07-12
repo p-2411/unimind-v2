@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import { useRouter } from "next/navigation";
+import { signUp } from "~/lib/auth-client";
 import { AuthPane } from "~/components/auth-pane";
 import { AuthError, AuthField, AuthSubmit } from "~/components/auth-form";
 
 export default function SignupPage() {
-  const { supabase } = useSupabase();
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,19 +27,16 @@ export default function SignupPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: trimmedName } },
-    });
+    const { error } = await signUp.email({ email, password, name: trimmedName });
 
     if (error) {
-      setError(error.message);
+      setError(error.message ?? "Signup failed.");
       setIsSubmitting(false);
       return;
     }
 
-    window.location.href = "/onboarding/courses";
+    router.push("/onboarding/courses");
+    router.refresh();
   }
 
   return (

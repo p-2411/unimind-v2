@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import { requestPasswordReset } from "~/lib/auth-client";
 import { AuthPane } from "~/components/auth-pane";
 import { AuthError, AuthField, AuthSubmit } from "~/components/auth-form";
 
 export default function ForgotPasswordPage() {
-  const { supabase } = useSupabase();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -18,12 +17,14 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const redirectTo = `${window.location.origin}/auth/confirm?next=/reset-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const { error } = await requestPasswordReset({
+      email,
+      redirectTo: "/reset-password",
+    });
 
     setIsSubmitting(false);
     if (error) {
-      setError(error.message);
+      setError(error.message ?? "Something went wrong.");
       return;
     }
     setSent(true);
@@ -49,7 +50,7 @@ export default function ForgotPasswordPage() {
         }
       >
         <div className="border border-[color:var(--color-phosphor)]/30 bg-[color:var(--color-phosphor)]/5 px-4 py-3 font-mono text-[12px] text-[color:var(--color-phosphor)]">
-          Email sent. Check your spam folder if it doesn't arrive within a minute.
+          Email sent. Check your spam folder if it doesn&apos;t arrive within a minute.
         </div>
       </AuthPane>
     );

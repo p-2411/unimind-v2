@@ -5,7 +5,6 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import { readMastery } from "~/server/lib/scoring";
-import { env } from "~/env";
 
 const CALIBRATION_THRESHOLD = 10;
 
@@ -246,18 +245,10 @@ export const userRouter = createTRPCRouter({
     }),
   
   deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
-  const userId = ctx.session.user.id;
-
-  await ctx.db.user.delete({ where: { id: userId } });
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const admin = createClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.SUPABASE_SECRET_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-  await admin.auth.admin.deleteUser(userId);
-}),
+    const userId = ctx.session.user.id;
+    // Cascade in schema deletes sessions, accounts, and all user data.
+    await ctx.db.user.delete({ where: { id: userId } });
+  }),
 
   enrollCourses: protectedProcedure
     .input(z.object({ courseIds: z.array(z.string()).min(1) }))

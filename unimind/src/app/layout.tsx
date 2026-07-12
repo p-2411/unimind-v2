@@ -4,7 +4,6 @@ import { type Metadata } from "next";
 import { JetBrains_Mono, Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
-import { SupabaseProvider } from "~/components/providers/supabase-provider";
 
 export const metadata: Metadata = {
   title: "Unimind — CS Practice Console",
@@ -29,9 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${jetbrains.variable} dark`}>
       <body className="font-mono antialiased">
-        <SupabaseProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </SupabaseProvider>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>
   );

@@ -51,44 +51,9 @@ async function getBlockedList(authToken) {
 
 async function getAuth() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(
-      ['unimindToken', 'unimindTokenExpiry', 'unimindRefreshToken', 'unimindSupabaseUrl', 'unimindSupabaseAnonKey'],
-      (data) => {
-        const { unimindToken, unimindTokenExpiry, unimindRefreshToken, unimindSupabaseUrl, unimindSupabaseAnonKey } = data;
-
-        // Access token still valid.
-        if (unimindToken && (!unimindTokenExpiry || Date.now() / 1000 < unimindTokenExpiry)) {
-          resolve(unimindToken);
-          return;
-        }
-
-        // Access token expired or missing — try a silent refresh via Supabase.
-        if (unimindRefreshToken && unimindSupabaseUrl && unimindSupabaseAnonKey) {
-          fetch(`${unimindSupabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
-            method: 'POST',
-            headers: { apikey: unimindSupabaseAnonKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: unimindRefreshToken }),
-          })
-            .then((resp) => (resp.ok ? resp.json() : null))
-            .then((session) => {
-              if (session?.access_token) {
-                chrome.storage.local.set({
-                  unimindToken: session.access_token,
-                  unimindTokenExpiry: session.expires_at,
-                  unimindRefreshToken: session.refresh_token,
-                });
-                resolve(session.access_token);
-              } else {
-                resolve(null);
-              }
-            })
-            .catch(() => resolve(null));
-          return;
-        }
-
-        resolve(null);
-      },
-    );
+    chrome.storage.local.get(['unimindToken'], (data) => {
+      resolve(data.unimindToken ?? null);
+    });
   });
 }
 

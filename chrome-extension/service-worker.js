@@ -1,41 +1,3 @@
-// ── Proactive token refresh ────────────────────────────────────────────────────
-// Runs every 20 minutes so the access token never silently expires while the
-// user has the extension installed but hasn't visited the UniMind site.
-
-const TOKEN_ALARM = 'unimind-token-refresh';
-
-chrome.alarms.create(TOKEN_ALARM, { periodInMinutes: 20 });
-
-async function refreshAuthToken() {
-  const data = await chrome.storage.local.get([
-    'unimindRefreshToken', 'unimindSupabaseUrl', 'unimindSupabaseAnonKey', 'unimindTokenExpiry',
-  ]);
-  const { unimindRefreshToken, unimindSupabaseUrl, unimindSupabaseAnonKey, unimindTokenExpiry } = data;
-
-  if (!unimindRefreshToken || !unimindSupabaseUrl || !unimindSupabaseAnonKey) return;
-
-  // Skip if the access token is still good for more than 10 minutes.
-  if (unimindTokenExpiry && (unimindTokenExpiry - Date.now() / 1000) > 600) return;
-
-  try {
-    const resp = await fetch(`${unimindSupabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { apikey: unimindSupabaseAnonKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: unimindRefreshToken }),
-    });
-    if (!resp.ok) return;
-    const session = await resp.json();
-    chrome.storage.local.set({
-      unimindToken: session.access_token,
-      unimindTokenExpiry: session.expires_at,
-      unimindRefreshToken: session.refresh_token,
-    });
-  } catch { /* silent — will retry in 20 min */ }
-}
-
-// Also refresh immediately on startup in case we woke up with an expired token.
-refreshAuthToken();
-
 // ── Daily reminder (chrome.alarms + chrome.notifications) ────────────────────
 
 const ALARM_NAME = 'unimind-daily-reminder';
@@ -58,7 +20,6 @@ async function scheduleReminder() {
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === TOKEN_ALARM) { refreshAuthToken(); return; }
   if (alarm.name !== ALARM_NAME) return;
   chrome.notifications.create('unimind-reminder', {
     type: 'basic',
@@ -116,6 +77,5 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Auth is now handled by auth-bridge.js writing to chrome.storage.local.
-  // No GET_AUTH message needed.
+  // Auth is handled by auth-bridge.js writing to chrome.storage.local.
 });

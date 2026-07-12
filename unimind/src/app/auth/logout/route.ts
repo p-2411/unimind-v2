@@ -1,10 +1,8 @@
+import { auth } from "~/lib/auth";
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "~/lib/supabase/server";
+import { headers } from "next/headers";
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
-
-  const url = new URL("/login", request.url);
-  return NextResponse.redirect(url, { status: 303 });
+  await auth.api.signOut({ headers: await headers() });
+  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
 }

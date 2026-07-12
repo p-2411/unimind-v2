@@ -1,7 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { env } from "~/env";
 import { db } from "~/server/db";
+import { auth } from "~/lib/auth";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,10 +14,10 @@ export async function OPTIONS() {
 
 async function getUserId(authHeader: string | null): Promise<string | null> {
   if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.slice(7);
-  const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
-  const { data } = await supabase.auth.getUser(token);
-  return data.user?.id ?? null;
+  const session = await auth.api.getSession({
+    headers: new Headers({ Authorization: authHeader }),
+  });
+  return session?.user.id ?? null;
 }
 
 export async function GET(request: Request) {

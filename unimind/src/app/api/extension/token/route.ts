@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "~/lib/supabase/server";
+import { headers } from "next/headers";
+import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
-import { env } from "~/env";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
     return NextResponse.json({
       token: null,
       expiresAt: null,
-      refreshToken: null,
-      supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
       reminderEnabled: false,
       reminderTime: "09:00",
     });
@@ -27,11 +21,8 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    token: session.access_token,
-    expiresAt: session.expires_at,
-    refreshToken: session.refresh_token,
-    supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    token: session.session.token,
+    expiresAt: Math.floor(new Date(session.session.expiresAt).getTime() / 1000),
     reminderEnabled: user?.dailyReminderEnabled ?? false,
     reminderTime: user?.dailyReminderTime ?? "09:00",
   });

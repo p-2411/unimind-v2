@@ -11,7 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { UnimindWordmark } from "~/components/logo";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 import {
   Sidebar,
@@ -107,10 +107,8 @@ export function AppSidebar() {
 }
 
 function SignOutButton() {
-  const { supabase } = useSupabase();
-
   async function onSignOut() {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = "/login";
   }
 

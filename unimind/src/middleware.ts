@@ -1,56 +1,34 @@
-import { createServerClient } from "@supabase/ssr";
+import { auth } from "~/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
-import { env } from "~/env";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
-  const supabase = createServerClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  // IMPORTANT: Do not place any code between createServerClient and getClaims().
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
-
-  const pathname = request.nextUrl.pathname;
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/forgot-password";
-  const isAuthApi = pathname.startsWith("/auth");
+  const isAuthApi = pathname.startsWith("/api/auth");
   const isExtensionApi = pathname.startsWith("/api/extension");
 
-  if (!user && !isAuthPage && !isAuthApi && !isExtensionApi) {
+  // Skip session check for routes that don't need it
+  if (isAuthApi || isExtensionApi) return NextResponse.next();
+
+  const session = await auth.api.getSession({ headers: request.headers });
+
+  if (!session && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  if (session && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

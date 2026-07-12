@@ -1,16 +1,13 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "~/lib/supabase/server";
+import { headers } from "next/headers";
+import { auth } from "~/lib/auth";
 import { HydrateClient } from "~/trpc/server";
 import { AppSidebar } from "~/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/login");
 
   return (
     <HydrateClient>

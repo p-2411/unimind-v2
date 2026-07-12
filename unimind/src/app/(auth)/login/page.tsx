@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import { useRouter } from "next/navigation";
+import { signIn } from "~/lib/auth-client";
 import { AuthPane } from "~/components/auth-pane";
 import { AuthError, AuthField, AuthSubmit } from "~/components/auth-form";
 
 export default function LoginPage() {
-  const { supabase } = useSupabase();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,15 +19,16 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await signIn.email({ email, password });
 
     if (error) {
-      setError(error.message);
+      setError(error.message ?? "Login failed.");
       setIsSubmitting(false);
       return;
     }
 
-    window.location.href = "/";
+    router.push("/");
+    router.refresh();
   }
 
   return (

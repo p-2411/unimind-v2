@@ -13,7 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import { changePassword, signOut } from "~/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 type User = RouterOutputs["user"]["me"];
@@ -120,8 +120,6 @@ export function SettingsForm({
   user: User;
   courses: Course[];
 }) {
-  const { supabase } = useSupabase();
-
   // Avatar
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.image);
@@ -176,21 +174,14 @@ export function SettingsForm({
     }
     setPasswordPending(true);
     setPasswordError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-    if (signInError) {
-      setPasswordError("Current password is incorrect.");
-      setPasswordPending(false);
-      return;
-    }
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
+    const { error } = await changePassword({
+      currentPassword,
+      newPassword,
+      revokeOtherSessions: false,
     });
     setPasswordPending(false);
-    if (updateError) {
-      setPasswordError(updateError.message);
+    if (error) {
+      setPasswordError(error.message ?? "Password change failed.");
       return;
     }
     setPasswordSaved(true);
@@ -228,7 +219,7 @@ export function SettingsForm({
   const router = useRouter();
   const deleteAccount = api.user.deleteAccount.useMutation({
     onSuccess: async () => {
-      await supabase.auth.signOut();
+      await signOut();
       router.push("/login");
     },
   });

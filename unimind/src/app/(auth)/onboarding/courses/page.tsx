@@ -1,20 +1,17 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "~/lib/supabase/server";
+import { headers } from "next/headers";
+import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import { api } from "~/trpc/server";
 import { AuthPane } from "~/components/auth-pane";
 import { CoursePicker } from "./course-picker";
 
 export default async function OnboardingCoursesPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/login");
 
   const enrollmentCount = await db.userCourse.count({
-    where: { userId: user.id },
+    where: { userId: session.user.id },
   });
   if (enrollmentCount > 0) redirect("/");
 
