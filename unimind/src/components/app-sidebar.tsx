@@ -70,7 +70,7 @@ export function AppSidebar() {
                         "group h-9 rounded-none border-l-2 pl-3 transition-colors",
                         active
                           ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-panel)] text-[color:var(--color-fg)]"
-                          : "border-transparent text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-fg)]",
+                          : "border-transparent text-[color:var(--color-fg-soft)] transition-[border-color,color,background-color] duration-150 hover:border-[color:var(--color-phosphor)]/40 hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-fg)]",
                       )}
                     >
                       <Link href={item.url} className="flex items-center gap-3">
