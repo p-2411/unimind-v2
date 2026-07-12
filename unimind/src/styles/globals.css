@@ -56,6 +56,25 @@
   0%, 60% { opacity: 1; }
   61%, 100% { opacity: 0; }
 }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-6px); }
+  30%       { transform: translateX(6px); }
+  45%       { transform: translateX(-4px); }
+  60%       { transform: translateX(4px); }
+  75%       { transform: translateX(-2px); }
+  90%       { transform: translateX(2px); }
+}
+@keyframes correct-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(124,255,107,0); }
+  25%  { box-shadow: 0 0 0 3px rgba(124,255,107,0.35), 0 0 24px rgba(124,255,107,0.12); }
+  100% { box-shadow: 0 0 0 0 rgba(124,255,107,0); }
+}
+@keyframes level-up-in {
+  0%   { opacity: 0; transform: scale(0.82); }
+  60%  { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
 .term-rise { animation: term-rise 0.55s cubic-bezier(.2,.7,.2,1) both; }
 .term-scan { transform-origin: left; animation: term-scan 0.8s cubic-bezier(.2,.7,.2,1) both; }
 .term-caret::after {
@@ -64,6 +83,9 @@
   color: var(--color-phosphor);
   animation: term-blink 1.1s steps(1,end) infinite;
 }
+.shake         { animation: shake 0.42s cubic-bezier(.36,.07,.19,.97) both; }
+.correct-flash { animation: correct-flash 0.7s ease-out both; }
+.level-up-card { animation: level-up-in 0.5s cubic-bezier(.2,.9,.3,1) both; }
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

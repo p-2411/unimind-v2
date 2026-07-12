@@ -274,6 +274,7 @@ export const questionRouter = createTRPCRouter({
         let newLongestStreak = longestStreak;
         let xp = existingUs?.xp ?? 0;
         let level = existingUs?.level ?? 0;
+        const prevLevel = level;
         const prevUpdatedAt = existingUt?.masteryUpdatedAt ?? now;
         const { masteryScore, masteryUpdatedAt } = applyMastery({
           prevScore,
@@ -373,7 +374,7 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        return { userTopic, nextDue: card.due };
+        return { userTopic, nextDue: card.due, prevLevel, newLevel: level, newXp: xp };
       });
 
       return {
@@ -382,6 +383,9 @@ export const questionRouter = createTRPCRouter({
         explanation: question.explanation,
         userTopic: result.userTopic,
         nextDue: result.nextDue,
+        leveledUp: result.newLevel > result.prevLevel,
+        newLevel: result.newLevel,
+        xp: result.newXp,
       };
     }),
 });
