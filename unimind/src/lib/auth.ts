@@ -37,15 +37,17 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
+          const firstName = user.name?.split(" ")[0] ?? "there";
           await resend.emails.send({
             from: "Mastify <noreply@mastify.app>",
             to: user.email,
-            subject: "Welcome to Mastify",
+            subject: "Let's get you caught up 🎓",
             html: `
-              <p>Hey ${user.name ?? "there"} 👋</p>
-              <p>Welcome to Mastify — your CS practice console.</p>
-              <p>Start practicing by visiting <a href="https://mastify.app">mastify.app</a> and enrolling in your courses.</p>
-              <p>Good luck this semester.</p>
+              <p>Hey ${firstName},</p>
+              <p>Welcome to Mastify — the CS practice console built for uni students who actually want to understand the material, not just pass the exam.</p>
+              <p>Here's how it works: enroll in your courses, and we'll serve you practice questions based on what's due and what you're weakest on. Answer one before you open YouTube. You'll be surprised how fast it adds up.</p>
+              <p>Get started → <a href="https://mastify.app">mastify.app</a></p>
+              <p>Good luck this semester. You've got this.</p>
               <p>— The Mastify team</p>
             `,
           });
