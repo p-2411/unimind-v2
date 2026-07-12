@@ -24,13 +24,13 @@
 
 ### 🎨 UI polish
 
-- [ ] **Raccoon mascot presence** — Duolingo-style character woven into the UI, not just the logo. SVG raccoon with distinct emotional states:
-  - `idle` — sitting calmly, default sidebar/empty state companion
-  - `happy` — arms up or tail wagging, shown after a correct answer or streak milestone
-  - `smug` — knowing look, shown on a streak ≥ 7 days or high mastery
-  - `tired` — droopy eyes, shown when the user hasn't practiced today
-  - `celebrating` — confetti / jumping pose, level-up moment
-  - Appears in: empty dashboard state, post-answer feedback, level-up modal (replaces plain text), streak card on progress page, onboarding completion
+- [x] **Raccoon mascot (phase 1)** — SVG raccoon with 5 moods; placed in sidebar footer, post-answer, level-up modal, dashboard empty state, progress streak card
+- [ ] **Raccoon mascot (phase 2 — Duolingo-style active presence)**
+  - Proactive streak reminder on dashboard when user hasn't practiced today ("haven't seen you yet today…")
+  - Post-answer raccoon takes up more real estate + says a short line ("nice one!" / "so close…") rather than tucked in a corner
+  - Sidebar raccoon blinks/sways via CSS keyframes (idle animation)
+  - Achievement toast — raccoon slides in from corner on milestones (streak, level, mastery thresholds)
+  - Raccoon reacts to wrong-answer streaks (3 in a row → tired face + "want to try something easier?")
 - [x] **Rounder UI** — softer card corners, less sharp edges throughout; more approachable, less console-intimidating
 - [x] **Flashcard micro-interactions** — shake on wrong answer, pulse/burst on correct; instant emotional feedback
 - [x] **Level-up celebration** — modal or full-screen animation when XP threshold is hit; celebrate the win
@@ -42,7 +42,9 @@
 ### ⚪ Nice to have
 
 - [x] Assessment-weighted paywall — urgency tiers (≤3d / ≤7d / ≤30d), ordered by nearest assessment date, then topic within assessment's week range
-- [ ] Force read delay — disable answer choices for 2–3s after flashcard appears so user has to read the question before clicking
+- [x] Force read delay — disable answer choices for 2–3s after flashcard appears so user has to read the question before clicking
+- [ ] **4th difficulty tier (LeetCode-hard)** — `difficulty = 4` questions; multi-step algorithm/proof style; distinct UI badge ("hard" in red/magenta); harder FSRS rating weight; seed a handful per topic
+- [ ] **"I don't know" button** — replaces guessing; sits alongside the answer choices; pressing it skips scoring (no penalty, no FSRS update) and opens a centre-screen modal showing the correct answer + explanation so the user actually learns before moving on; modal has a "Got it" button to continue
 
 ---
 
