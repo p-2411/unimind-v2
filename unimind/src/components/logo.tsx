@@ -1,37 +1,29 @@
 function RaccoonIcon() {
   return (
     <>
-      {/* Ears — drawn first so cap band sits on top */}
-      <circle cx="24" cy="46" r="12" stroke="currentColor" strokeWidth="4.5" />
-      <circle cx="76" cy="46" r="12" stroke="currentColor" strokeWidth="4.5" />
-      <circle cx="24" cy="46" r="6"  stroke="currentColor" strokeWidth="2.5" opacity="0.5" />
-      <circle cx="76" cy="46" r="6"  stroke="currentColor" strokeWidth="2.5" opacity="0.5" />
-
       {/* Graduation cap */}
-      <rect x="34" y="30" width="32" height="12" rx="3" fill="currentColor" opacity="0.9" />
-      <rect x="10" y="14" width="80" height="18" rx="3" fill="currentColor" />
-      <circle cx="50" cy="14" r="3.5" fill="currentColor" opacity="0.55" />
-      <line x1="88" y1="23" x2="95" y2="39" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="95" cy="43" r="3.5" fill="currentColor" />
+      <rect x="11" y="12" width="78" height="14" rx="2" fill="currentColor" />
+      <rect x="35" y="26" width="30" height="11" rx="2" fill="currentColor" opacity="0.82" />
+      <line x1="88" y1="19" x2="94" y2="33" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="94" cy="36" r="3" fill="currentColor" />
 
-      {/* Head */}
-      <circle cx="50" cy="68" r="27" stroke="currentColor" strokeWidth="5" />
+      {/* Ears */}
+      <circle cx="26" cy="43" r="10" stroke="currentColor" strokeWidth="4" />
+      <circle cx="74" cy="43" r="10" stroke="currentColor" strokeWidth="4" />
 
-      {/* Eye mask patches */}
-      <ellipse cx="37" cy="66" rx="11.5" ry="8" fill="currentColor" opacity="0.22" />
-      <ellipse cx="63" cy="66" rx="11.5" ry="8" fill="currentColor" opacity="0.22" />
+      {/* Head — slim ellipse */}
+      <ellipse cx="50" cy="69" rx="23" ry="28" stroke="currentColor" strokeWidth="4" />
+
+      {/* Eye mask */}
+      <ellipse cx="37" cy="66" rx="9.5" ry="7" fill="currentColor" opacity="0.18" />
+      <ellipse cx="63" cy="66" rx="9.5" ry="7" fill="currentColor" opacity="0.18" />
 
       {/* Eyes */}
-      <circle cx="37" cy="66" r="7"   stroke="currentColor" strokeWidth="3" />
-      <circle cx="63" cy="66" r="7"   stroke="currentColor" strokeWidth="3" />
-      <circle cx="37" cy="66" r="3.5" fill="currentColor" />
-      <circle cx="63" cy="66" r="3.5" fill="currentColor" />
-      <circle cx="39" cy="64" r="1.5" fill="white" />
-      <circle cx="65" cy="64" r="1.5" fill="white" />
+      <circle cx="37" cy="66" r="4" fill="currentColor" />
+      <circle cx="63" cy="66" r="4" fill="currentColor" />
 
-      {/* Nose + mouth */}
-      <ellipse cx="50" cy="77" rx="4" ry="3" fill="currentColor" opacity="0.75" />
-      <path d="M 45 81 Q 50 87 55 81" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Nose */}
+      <circle cx="50" cy="77" r="2.5" fill="currentColor" opacity="0.58" />
     </>
   );
 }
