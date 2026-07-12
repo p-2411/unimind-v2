@@ -98,7 +98,7 @@ function SaveButton({
     <button
       onClick={onClick}
       disabled={pending || disabled}
-      className="inline-flex items-center gap-2 border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-[color:var(--color-void)] uppercase transition-colors hover:bg-[color:var(--color-phosphor)]/90 disabled:cursor-not-allowed disabled:border-[color:var(--color-rule)] disabled:bg-transparent disabled:text-[color:var(--color-fg-mute)]"
+      className="inline-flex items-center gap-2 border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-4 py-2 font-mono text-[11px] tracking-[0.2em] text-[color:var(--color-void)] uppercase transition-all hover:bg-[color:var(--color-phosphor)]/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:border-[color:var(--color-rule)] disabled:bg-transparent disabled:text-[color:var(--color-fg-mute)]"
     >
       {saved ? (
         <>
