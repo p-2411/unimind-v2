@@ -39,6 +39,9 @@ model User {
   attempts    QuestionAttempt[]
   feedback    Feedback[]
 
+  groupMemberships GroupMembership[]
+  groupMessages    GroupMessage[]
+
   @@map("users")
 }
 
@@ -262,6 +265,51 @@ model Feedback {
 
   @@index([createdAt])
   @@map("feedback")
+}
+
+// ============================================
+// STUDY GROUPS
+// ============================================
+
+model StudyGroup {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+
+  members  GroupMembership[]
+  messages GroupMessage[]
+
+  @@map("study_groups")
+}
+
+model GroupMembership {
+  id       String   @id @default(cuid())
+  userId   String   @db.Uuid
+  groupId  String
+  role     String   @default("member") // "owner" | "member"
+  joinedAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+  @@map("group_memberships")
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String   @db.Uuid
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
 }
 
 // ============================================

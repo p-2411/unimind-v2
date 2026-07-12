@@ -6,6 +6,7 @@ import { courseRouter } from "./routers/course";
 import { userRouter } from "./routers/user";
 import { adminRouter } from "./routers/admin";
 import { feedbackRouter } from "./routers/feedback";
+import { groupRouter } from "./routers/group";
 
 export const appRouter = createTRPCRouter({
   user: userRouter,
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   question: questionRouter,
   admin: adminRouter,
   feedback: feedbackRouter,
+  group: groupRouter,
 });
 
 export type AppRouter = typeof appRouter;
