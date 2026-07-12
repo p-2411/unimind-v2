@@ -51,8 +51,8 @@ async function getBlockedList(authToken) {
 
 async function getAuth() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['unimindToken'], (data) => {
-      resolve(data.unimindToken ?? null);
+    chrome.storage.local.get(['mastifyToken'], (data) => {
+      resolve(data.mastifyToken ?? null);
     });
   });
 }
@@ -87,19 +87,19 @@ let startedAt = Date.now();
 
 function hidePageInstantly() {
   const s = document.createElement('style');
-  s.id = 'unimind-hide';
+  s.id = 'mastify-hide';
   s.textContent = 'html{visibility:hidden!important}';
   document.documentElement.appendChild(s);
 }
 
 function showPage() {
-  document.getElementById('unimind-hide')?.remove();
+  document.getElementById('mastify-hide')?.remove();
 }
 
 function showOverlay(content) {
   if (!overlayEl) {
     overlayEl = document.createElement('div');
-    overlayEl.id = 'unimind-overlay';
+    overlayEl.id = 'mastify-overlay';
     document.documentElement.appendChild(overlayEl);
   }
   overlayEl.innerHTML = content;
@@ -168,9 +168,9 @@ function buildLoginHTML() {
         <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">Log in to continue</p>
-      <p class="um-question">You need to be logged in to UniMind to access blocked sites.</p>
+      <p class="um-question">You need to be logged in to Mastify to access blocked sites.</p>
       <div class="um-actions">
-        <a class="um-btn um-btn-primary" href="${API_BASE}/login" target="_blank">Log in to UniMind</a>
+        <a class="um-btn um-btn-primary" href="${API_BASE}/login" target="_blank">Log in to Mastify</a>
         <button class="um-btn um-btn-ghost" id="um-skip-login">Skip for now</button>
       </div>
     </div>
@@ -184,9 +184,9 @@ function buildSessionExpiredHTML() {
         <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">Session expired</p>
-      <p class="um-question">Visit UniMind to refresh your session, then come back.</p>
+      <p class="um-question">Visit Mastify to refresh your session, then come back.</p>
       <div class="um-actions">
-        <a class="um-btn um-btn-primary" href="${API_BASE}" target="_blank">Open UniMind</a>
+        <a class="um-btn um-btn-primary" href="${API_BASE}" target="_blank">Open Mastify</a>
         <button class="um-btn um-btn-ghost" id="um-skip">Continue anyway</button>
       </div>
     </div>
@@ -200,9 +200,9 @@ function buildNoQuestionsHTML() {
         <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">No questions available</p>
-      <p class="um-question">Enroll in a course on UniMind to get practice questions.</p>
+      <p class="um-question">Enroll in a course on Mastify to get practice questions.</p>
       <div class="um-actions">
-        <a class="um-btn um-btn-primary" href="${API_BASE}" target="_blank">Open UniMind</a>
+        <a class="um-btn um-btn-primary" href="${API_BASE}" target="_blank">Open Mastify</a>
         <button class="um-btn um-btn-ghost" id="um-skip">Continue anyway</button>
       </div>
     </div>
@@ -216,7 +216,7 @@ function buildFetchErrorHTML() {
         <div class="um-logo">${SCHOLAR_SVG}</div>
       </div>
       <p class="um-prompt">Couldn't load question</p>
-      <p class="um-question">Something went wrong fetching your question. Make sure UniMind is reachable and try again.</p>
+      <p class="um-question">Something went wrong fetching your question. Make sure Mastify is reachable and try again.</p>
       <div class="um-actions">
         <button class="um-btn um-btn-primary" id="um-retry-fetch">Try again</button>
         <button class="um-btn um-btn-ghost" id="um-skip">Continue anyway</button>
@@ -231,14 +231,14 @@ async function fetchQuestion() {
     const resp = await fetch(`${API_BASE}/api/extension/question`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    console.log('[UniMind] /api/extension/question status:', resp.status);
+    console.log('[Mastify] /api/extension/question status:', resp.status);
     if (resp.status === 401) return 'unauthorized';
     if (!resp.ok) return 'error';
     const data = await resp.json();
-    console.log('[UniMind] question response body:', JSON.stringify(data));
+    console.log('[Mastify] question response body:', JSON.stringify(data));
     return data.question ?? null;
   } catch (e) {
-    console.error('[UniMind] fetchQuestion threw:', e);
+    console.error('[Mastify] fetchQuestion threw:', e);
     return 'error';
   }
 }
@@ -392,7 +392,7 @@ function attachRetryFetchHandler() {
   }
 
   currentQuestion = await fetchQuestion();
-  console.log('[UniMind] question result:', currentQuestion);
+  console.log('[Mastify] question result:', currentQuestion);
 
   if (currentQuestion === 'unauthorized') {
     showOverlay(buildSessionExpiredHTML());
@@ -416,4 +416,4 @@ function attachRetryFetchHandler() {
   startedAt = Date.now();
   showOverlay(buildQuestionHTML(currentQuestion));
   attachOverlayHandlers();
-})().catch((e) => { console.error('[UniMind] fatal:', e); showPage(); });
+})().catch((e) => { console.error('[Mastify] fatal:', e); showPage(); });

@@ -16,11 +16,11 @@ const API_BASE = 'http://localhost:3000';
 
 async function getToken() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['unimindToken', 'unimindTokenExpiry'], (data) => {
-      const { unimindToken, unimindTokenExpiry } = data;
-      if (!unimindToken) { resolve(null); return; }
-      if (unimindTokenExpiry && Date.now() / 1000 > unimindTokenExpiry) { resolve(null); return; }
-      resolve(unimindToken);
+    chrome.storage.local.get(['mastifyToken', 'mastifyTokenExpiry'], (data) => {
+      const { mastifyToken, mastifyTokenExpiry } = data;
+      if (!mastifyToken) { resolve(null); return; }
+      if (mastifyTokenExpiry && Date.now() / 1000 > mastifyTokenExpiry) { resolve(null); return; }
+      resolve(mastifyToken);
     });
   });
 }

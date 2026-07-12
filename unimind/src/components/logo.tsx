@@ -1,10 +1,10 @@
 // Scholar mark — icon only (mini logo)
-export function UnimindLogo({ className }: { className?: string }) {
+export function MastifyLogo({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 100"
       fill="none"
-      aria-label="UniMind"
+      aria-label="Mastify"
       className={className}
     >
       <path d="M 26,50 L 26,70 A 24,24 0 0 0 74,70 L 74,50" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -16,14 +16,13 @@ export function UnimindLogo({ className }: { className?: string }) {
   );
 }
 
-// Scholar mark + NIMIND — full wordmark
-// viewBox 278×68: mark scaled (0.769) so U caps align with text caps at font-size 44
-export function UnimindWordmark({ className }: { className?: string }) {
+// Scholar mark + MASTIFY — full wordmark
+export function MastifyWordmark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 278 68"
+      viewBox="0 0 310 68"
       fill="none"
-      aria-label="UniMind"
+      aria-label="Mastify"
       className={className}
     >
       <g transform="translate(0 -8.3) scale(0.769)">
@@ -40,7 +39,7 @@ export function UnimindWordmark({ className }: { className?: string }) {
         fontWeight="700"
         letterSpacing="1"
         fill="currentColor"
-      >NIMIND</text>
+      >MASTIFY</text>
     </svg>
   );
 }

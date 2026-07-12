@@ -520,7 +520,7 @@ export function SettingsForm({
                 Daily study reminder
               </div>
               <div className="mt-0.5 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
-                Delivered via the UniMind Chrome extension
+                Delivered via the Mastify Chrome extension
               </div>
             </div>
             <button

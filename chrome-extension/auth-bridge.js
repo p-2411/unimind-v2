@@ -1,4 +1,4 @@
-// Runs on the UniMind web app — fetches the session token from the server
+// Runs on the Mastify web app — fetches the session token from the server
 // (same-origin, so cookies work) and stores it in chrome.storage.local.
 
 async function sync() {
@@ -7,8 +7,8 @@ async function sync() {
     if (!resp.ok) return;
     const { token, expiresAt, reminderEnabled, reminderTime } = await resp.json();
     chrome.storage.local.set({
-      unimindToken: token ?? null,
-      unimindTokenExpiry: expiresAt ?? null,
+      mastifyToken: token ?? null,
+      mastifyTokenExpiry: expiresAt ?? null,
       notifEnabled: reminderEnabled ?? false,
       notifTime: reminderTime ?? '09:00',
     });

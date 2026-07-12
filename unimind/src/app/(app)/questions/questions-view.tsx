@@ -116,7 +116,7 @@ export function QuestionsView() {
         <div className="flex h-12 items-center gap-3 px-4">
           <SidebarTrigger className="-ml-1 text-[color:var(--color-fg-soft)]" />
           <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
-            Unimind <span className="text-[color:var(--color-fg-mute)]">/</span>{" "}
+            Mastify <span className="text-[color:var(--color-fg-mute)]">/</span>{" "}
             <span className="text-[color:var(--color-fg)]">Questions</span>
           </span>
           <span className="ml-auto font-mono text-[11px] text-[color:var(--color-fg-mute)]">

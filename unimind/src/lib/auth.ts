@@ -33,6 +33,26 @@ export const auth = betterAuth({
       });
     },
   },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await resend.emails.send({
+            from: "Mastify <noreply@mastify.app>",
+            to: user.email,
+            subject: "Welcome to Mastify",
+            html: `
+              <p>Hey ${user.name ?? "there"} 👋</p>
+              <p>Welcome to Mastify — your CS practice console.</p>
+              <p>Start practicing by visiting <a href="https://mastify.app">mastify.app</a> and enrolling in your courses.</p>
+              <p>Good luck this semester.</p>
+              <p>— The Mastify team</p>
+            `,
+          });
+        },
+      },
+    },
+  },
   plugins: [
     bearer(), // lets extension routes authenticate via Authorization: Bearer <session-token>
   ],

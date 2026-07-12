@@ -74,7 +74,7 @@ export default async function Dashboard() {
         <div className="flex h-12 items-center gap-3 px-4">
           <SidebarTrigger className="-ml-1 text-[color:var(--color-fg-soft)]" />
           <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
-            Unimind <span className="text-[color:var(--color-fg-mute)]">/</span>{" "}
+            Mastify <span className="text-[color:var(--color-fg-mute)]">/</span>{" "}
             <span className="text-[color:var(--color-fg)]">Dashboard</span>
           </span>
           <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--color-fg-mute)]">

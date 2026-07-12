@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   TrendingUp,
 } from "lucide-react";
-import { UnimindWordmark } from "~/components/logo";
+import { MastifyWordmark } from "~/components/logo";
 import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 import {
@@ -41,7 +41,7 @@ export function AppSidebar() {
     <Sidebar className="border-r border-[color:var(--color-rule)] bg-[color:var(--color-void)]">
       <SidebarHeader>
         <div className="px-3 pt-5 pb-3">
-          <UnimindWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
+          <MastifyWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
           <div className="mt-1 font-sans text-[10.5px] text-[color:var(--color-fg-mute)]">
             CS practice
           </div>

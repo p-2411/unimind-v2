@@ -1,6 +1,6 @@
 // ── Daily reminder (chrome.alarms + chrome.notifications) ────────────────────
 
-const ALARM_NAME = 'unimind-daily-reminder';
+const ALARM_NAME = 'mastify-daily-reminder';
 
 async function scheduleReminder() {
   const { notifEnabled, notifTime } = await chrome.storage.local.get(['notifEnabled', 'notifTime']);
@@ -21,11 +21,11 @@ async function scheduleReminder() {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== ALARM_NAME) return;
-  chrome.notifications.create('unimind-reminder', {
+  chrome.notifications.create('mastify-reminder', {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
-    title: 'UniMind',
-    message: 'Time to study! Open UniMind to practice today\'s questions.',
+    title: 'Mastify',
+    message: 'Time to study! Open Mastify to practice today\'s questions.',
     priority: 1,
   });
 });

@@ -6,7 +6,7 @@ import { JetBrains_Mono, Geist } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "Unimind — CS Practice Console",
+  title: "Mastify — CS Practice Console",
   description: "A practice console for computer science students.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };

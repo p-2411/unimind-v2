@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UnimindWordmark } from "~/components/logo";
+import { MastifyWordmark } from "~/components/logo";
 
 type Props = {
   eyebrow?: string;
@@ -21,7 +21,7 @@ export function AuthPane({
       <div className="w-full max-w-[440px]">
         {/* Mobile header */}
         <div className="mb-8 lg:hidden">
-          <UnimindWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
+          <MastifyWordmark className="h-7 w-auto text-[color:var(--color-phosphor)]" />
         </div>
 
         <div className="term-rise">
