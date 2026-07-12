@@ -87,6 +87,15 @@
 .correct-flash { animation: correct-flash 0.7s ease-out both; }
 .level-up-card { animation: level-up-in 0.5s cubic-bezier(.2,.9,.3,1) both; }
 
+@keyframes read-timer {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.read-timer {
+  transform-origin: left;
+  animation: read-timer 2s linear forwards;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

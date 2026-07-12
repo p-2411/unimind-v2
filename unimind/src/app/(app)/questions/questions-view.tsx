@@ -325,6 +325,12 @@ function QuestionCard({
   onCheck: () => void;
   checking: boolean;
 }) {
+  const [locked, setLocked] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLocked(false), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
   const revealed = result !== null;
   const correct = result?.isCorrect ?? false;
 
@@ -365,7 +371,7 @@ function QuestionCard({
         </h3>
       </div>
 
-      <ul className="grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2">
+      <ul className={`grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 transition-opacity duration-300 ${locked && !revealed ? "pointer-events-none opacity-40" : ""}`}>
         {q.choices.map((c, i) => {
           const isPicked = picked === i;
           const isAnswer = revealed && result !== null && i === result.answerIndex;
@@ -410,7 +416,14 @@ function QuestionCard({
       </ul>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2.5">
-        {!revealed ? (
+        {locked && !revealed ? (
+          <div className="flex w-full items-center gap-3">
+            <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">Read the question…</span>
+            <div className="ml-auto h-0.5 w-24 overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+              <div className="read-timer h-full rounded-full bg-[color:var(--color-phosphor)]/60" />
+            </div>
+          </div>
+        ) : !revealed ? (
           <>
             <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
               {picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}
