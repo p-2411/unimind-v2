@@ -6,6 +6,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     DIRECT_URL: z.string().url(),
     BETTER_AUTH_SECRET: z.string().min(1),
+    RESEND_API_KEY: z.string().min(1),
     ANTHROPIC_API_KEY: z.string().min(1),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -18,6 +19,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     NODE_ENV: process.env.NODE_ENV,
   },

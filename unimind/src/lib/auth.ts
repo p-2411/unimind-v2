@@ -1,7 +1,10 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins";
+import { Resend } from "resend";
 import { db } from "~/server/db";
+
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
@@ -17,8 +20,17 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 6,
     sendResetPassword: async ({ user, url }) => {
-      // TODO: wire up Resend before launch
-      console.log(`[DEV] Password reset for ${user.email}: ${url}`);
+      await resend.emails.send({
+        from: "Mastify <noreply@mastify.app>",
+        to: user.email,
+        subject: "Reset your password",
+        html: `
+          <p>Hi ${user.name ?? "there"},</p>
+          <p>Click the link below to reset your Mastify password. It expires in 1 hour.</p>
+          <p><a href="${url}">${url}</a></p>
+          <p>If you didn't request this, you can ignore this email.</p>
+        `,
+      });
     },
   },
   plugins: [
