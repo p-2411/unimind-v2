@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { Flame, Brain } from "lucide-react";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { CountUp } from "~/components/count-up";
+import { AnimatedBar } from "~/components/animated-bar";
 import { api } from "~/trpc/server";
 import { TopicList } from "./topic-list";
 import Anthropic from "@anthropic-ai/sdk";
@@ -29,7 +31,7 @@ async function AIOverview({ stats }: { stats: ProgressStats }) {
   const text = (aiResponse.content[0] as { text: string }).text;
 
   return (
-    <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+    <div className="mt-3 rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
       <div className="flex gap-3">
         <Brain
           className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-magenta)]"
@@ -45,7 +47,7 @@ async function AIOverview({ stats }: { stats: ProgressStats }) {
 
 function AIOverviewSkeleton() {
   return (
-    <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+    <div className="mt-3 rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
       <div className="flex gap-3">
         <Brain
           className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-magenta)] animate-pulse"
@@ -89,35 +91,43 @@ export default async function ProgressPage() {
 
       <main className="px-4 pt-6 pb-16 md:px-8">
         {/* Stats bar */}
-        <section className="term-rise grid grid-cols-2 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] md:grid-cols-4">
+        <section className="term-rise overflow-hidden rounded-xl border border-[color:var(--color-rule)] grid grid-cols-2 gap-px bg-[color:var(--color-rule)] md:grid-cols-4">
           {[
             {
               label: "Streak",
-              value: `${stats.currentStreak}d`,
+              numericValue: stats.currentStreak,
+              prefix: "",
+              suffix: "d",
               sub: `Best ${stats.longestStreak}d`,
               color: "amber",
-              icon: Flame,
+              Icon: Flame as typeof Flame | null,
             },
             {
               label: "Level",
-              value: `L${stats.level}`,
+              numericValue: stats.level,
+              prefix: "L",
+              suffix: "",
               sub: `${stats.xp} XP`,
               color: "phosphor",
-              icon: null,
+              Icon: null as typeof Flame | null,
             },
             {
               label: "XP to next level",
-              value: `${xpForNextLevel - stats.xp}`,
+              numericValue: xpForNextLevel - stats.xp,
+              prefix: "",
+              suffix: "",
               sub: "XP remaining",
               color: "cyan",
-              icon: null,
+              Icon: null as typeof Flame | null,
             },
             {
               label: "Topics tracked",
-              value: String(stats.topics.length),
+              numericValue: stats.topics.length,
+              prefix: "",
+              suffix: "",
               sub: "all time",
               color: "fg",
-              icon: null,
+              Icon: null as typeof Flame | null,
             },
           ].map((tile, i) => (
             <div
@@ -125,21 +135,15 @@ export default async function ProgressPage() {
               className="term-rise bg-[color:var(--color-panel)] px-5 py-5"
               style={{ animationDelay: `${60 + i * 60}ms` }}
             >
-              <div className="font-mono text-[10px] tracking-[0.24em] text-[color:var(--color-fg-mute)] uppercase">
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
                 {tile.label}
               </div>
               <div
-                className="mt-2 flex items-center gap-2 font-mono text-[32px] leading-none font-semibold tabular-nums"
+                className="mt-2 flex items-center gap-2 font-mono text-[32px] font-semibold leading-none tabular-nums"
                 style={{ color: `var(--color-${tile.color})` }}
               >
-                {tile.icon && (
-                  <tile.icon
-                    className="h-6 w-6"
-                    strokeWidth={2}
-                    fill="currentColor"
-                  />
-                )}
-                {tile.value}
+                {tile.Icon && <tile.Icon className="h-6 w-6" strokeWidth={2} fill="currentColor" />}
+                <CountUp value={tile.numericValue} prefix={tile.prefix} suffix={tile.suffix} duration={800} />
               </div>
               <div className="mt-2 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
                 {tile.sub}
@@ -150,7 +154,7 @@ export default async function ProgressPage() {
 
         {/* XP progress bar */}
         <section
-          className="term-rise mt-4 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-5 py-4"
+          className="term-rise mt-4 rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-5 py-4"
           style={{ animationDelay: "300ms" }}
         >
           <div className="flex items-center justify-between">
@@ -161,14 +165,8 @@ export default async function ProgressPage() {
               {xpProgress}%
             </span>
           </div>
-          <div
-            className="term-scan mt-2 h-2 w-full overflow-hidden bg-[color:var(--color-rule-hi)]"
-            style={{ animationDelay: "400ms" }}
-          >
-            <div
-              className="h-full bg-[color:var(--color-phosphor)]"
-              style={{ width: `${xpProgress}%` }}
-            />
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+            <AnimatedBar pct={xpProgress} color="var(--color-phosphor)" delay={350} rounded />
           </div>
         </section>
 
@@ -180,7 +178,7 @@ export default async function ProgressPage() {
             <h2 className="font-mono text-[16px] font-semibold tracking-tight text-[color:var(--color-fg)]">
               AI Overview
             </h2>
-            <span className="mb-0.5 font-mono text-[10px] tracking-[0.2em] text-[color:var(--color-magenta)] uppercase">
+            <span className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[color:var(--color-magenta)]">
               beta
             </span>
           </div>

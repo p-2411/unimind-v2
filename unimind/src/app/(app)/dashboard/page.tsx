@@ -1,6 +1,8 @@
 import { Flame, Sparkles } from "lucide-react";
 import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { CountUp } from "~/components/count-up";
+import { AnimatedBar } from "~/components/animated-bar";
 import { PreviewQuestion } from "./preview-question";
 import { Greeting } from "./greeting";
 
@@ -31,40 +33,50 @@ export default async function Dashboard() {
   const tiles = [
     {
       label: "Courses covered",
-      value: String(stats.coursesCovered),
+      numericValue: stats.coursesCovered,
+      prefix: "" as const,
+      suffix: "" as const,
       delta: stats.coursesCovered === 0 ? "—" : "all-time",
       tone: "fg" as const,
-      icon: null,
+      Icon: null as typeof Flame | null,
     },
     {
       label: "Topics covered",
-      value: String(stats.topicsCovered),
+      numericValue: stats.topicsCovered,
+      prefix: "" as const,
+      suffix: "" as const,
       delta: stats.topicsCovered === 0 ? "—" : "all-time",
       tone: "fg" as const,
-      icon: null,
+      Icon: null as typeof Flame | null,
     },
     {
       label: "Accuracy",
-      value: calibrating ? "—" : `${stats.accuracy}%`,
+      numericValue: calibrating ? null : stats.accuracy!,
+      prefix: "" as const,
+      suffix: "%" as const,
       delta: calibrating
         ? `Calibrating ${stats.totalAnswers}/${stats.calibrationThreshold}`
         : "across topics",
       tone: "cyan" as const,
-      icon: null,
+      Icon: null as typeof Flame | null,
     },
     {
       label: "Streak",
-      value: `${stats.currentStreak}d`,
+      numericValue: stats.currentStreak,
+      prefix: "" as const,
+      suffix: "d" as const,
       delta: `Best ${stats.longestStreak}d`,
       tone: "amber" as const,
-      icon: Flame,
+      Icon: Flame as typeof Flame | null,
     },
     {
       label: "Level",
-      value: `L${stats.level}`,
+      numericValue: stats.level,
+      prefix: "L" as const,
+      suffix: "" as const,
       delta: `${stats.xp} XP`,
       tone: "phosphor" as const,
-      icon: null,
+      Icon: null as typeof Flame | null,
     },
   ];
 
@@ -93,7 +105,7 @@ export default async function Dashboard() {
           <Greeting />
         </section>
 
-        <aside className="term-rise mt-6 flex items-start gap-3 border-l-2 border-[color:var(--color-phosphor)] bg-[color:var(--color-panel)] px-4 py-3">
+        <aside className="term-rise mt-6 flex items-start gap-3 rounded-xl border-l-2 border-[color:var(--color-phosphor)] bg-[color:var(--color-panel)] px-4 py-3">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-phosphor)]" strokeWidth={2} />
           <div className="min-w-0">
             <p className="font-sans text-[13.5px] italic leading-snug text-[color:var(--color-fg)]">
@@ -105,7 +117,7 @@ export default async function Dashboard() {
           </div>
         </aside>
 
-        <section className="mt-8 grid grid-cols-2 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] md:grid-cols-3 lg:grid-cols-5">
+        <section className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] md:grid-cols-3 lg:grid-cols-5">
           {tiles.map((s, i) => (
             <div
               key={s.label}
@@ -119,8 +131,11 @@ export default async function Dashboard() {
                 className="mt-2 inline-flex items-center gap-2 font-mono text-[36px] font-semibold leading-none tabular-nums"
                 style={{ color: `var(--color-${s.tone})` }}
               >
-                {s.icon && <s.icon className="h-7 w-7" strokeWidth={2} fill="currentColor" />}
-                {s.value}
+                {s.Icon && <s.Icon className="h-7 w-7" strokeWidth={2} fill="currentColor" />}
+                {s.numericValue === null
+                  ? "—"
+                  : <CountUp value={s.numericValue} prefix={s.prefix} suffix={s.suffix} duration={800} />
+                }
               </div>
               <div className="mt-2 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
                 {s.delta}
@@ -132,7 +147,7 @@ export default async function Dashboard() {
         <section className="mt-8 grid grid-cols-12 gap-4">
           <div className="col-span-12 min-w-0 lg:col-span-5">
             <SectionHead title="Topic Mastery" hint="30 days" />
-            <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
+            <div className="mt-3 overflow-hidden rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
               {stats.topicMastery.length === 0 ? (
                 <div className="p-6 text-center font-sans text-[13px] text-[color:var(--color-fg-mute)]">
                   Answer a question to start tracking topic mastery.
@@ -156,18 +171,13 @@ export default async function Dashboard() {
                           <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-fg-mute)]">
                             {t.correctCount}/{t.totalCount}
                             {!calibrating && (
-                              <span className="ml-2" style={{ color }}>
-                                {pct}%
-                              </span>
+                              <span className="ml-2" style={{ color }}>{pct}%</span>
                             )}
                           </span>
                         </div>
                         {!calibrating && (
-                          <div
-                            className="term-scan mt-2 h-1.5 w-full overflow-hidden bg-[color:var(--color-rule-hi)]"
-                            style={{ animationDelay: `${120 + i * 70}ms` }}
-                          >
-                            <div className="h-full" style={{ width: `${pct}%`, background: color }} />
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+                            <AnimatedBar pct={pct} color={color} delay={i * 70} rounded />
                           </div>
                         )}
                       </li>
@@ -184,7 +194,7 @@ export default async function Dashboard() {
               {nextQuestion ? (
                 <PreviewQuestion question={nextQuestion} />
               ) : (
-                <div className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
+                <div className="rounded-xl border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
                   No questions available yet.
                 </div>
               )}

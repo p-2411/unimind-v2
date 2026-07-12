@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RouterOutputs } from "~/trpc/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { AnimatedBar } from "~/components/animated-bar";
 
 function masteryColor(score: number) {
   if (score >= 80) return "var(--color-phosphor)";
@@ -57,7 +58,7 @@ export function TopicList({ topics }: { topics: Topics }) {
             {group.courseName}
           </div>
 
-          <div className="border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
+          <div className="overflow-hidden rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
             <ul className="divide-y divide-[color:var(--color-rule)]">
               {group.topics.map((topic, i) => {
                 const color = masteryColor(topic.score);
@@ -90,14 +91,8 @@ export function TopicList({ topics }: { topics: Topics }) {
                             </span>
                           </span>
                         </span>
-                        <div
-                          className="term-scan mt-2 h-1.5 w-full overflow-hidden bg-[color:var(--color-rule-hi)]"
-                          style={{ animationDelay: `${120 + i * 70}ms` }}
-                        >
-                          <div
-                            className="h-full"
-                            style={{ width: `${topic.score}%`, background: color }}
-                          />
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+                          <AnimatedBar pct={topic.score} color={color} delay={i * 60} rounded />
                         </div>
                       </span>
                     </button>
@@ -127,11 +122,8 @@ export function TopicList({ topics }: { topics: Topics }) {
                                     </span>
                                   </span>
                                 </span>
-                                <div className="mt-1.5 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
-                                  <div
-                                    className="h-full"
-                                    style={{ width: `${acc}%`, background: stColor }}
-                                  />
+                                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+                                  <AnimatedBar pct={acc} color={stColor} delay={100} rounded />
                                 </div>
                               </span>
                             </li>
