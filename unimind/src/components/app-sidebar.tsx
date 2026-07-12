@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldAlert,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { MastifyWordmark } from "~/components/logo";
 import { signOut } from "~/lib/auth-client";
@@ -30,6 +31,7 @@ const items = [
   { title: "Dashboard", url: "/", icon: LayoutGrid },
   { title: "Questions", url: "/questions", icon: ListOrdered },
   { title: "Progress", url: "/progress", icon: TrendingUp },
+  { title: "Groups", url: "/groups", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
   { title: "Admin", url: "/admin", icon: ShieldAlert },
 ];
