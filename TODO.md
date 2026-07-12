@@ -4,17 +4,8 @@
 
 ### 🔴 Pre-launch
 
-- [x] Extension question cooldown — 30 min per domain stored in `chrome.storage.local`; only correct answers grant the cooldown
 - [ ] Extension: swap `localhost:3000` → prod domain before publishing (`API_BASE` + `UNIMIND_URL` in content.js + auth-bridge.js)
 - [ ] Deploy web app — Vercel or similar
-
----
-
-### 🟡 Settings (incomplete)
-
-- [x] Avatar upload — Supabase Storage `avatars` bucket, POST /api/avatar, updates `User.image`, shown in settings
-- [ ] Notifications — daily study reminder (web push or email cron); toggle exists in settings but is a placeholder
-- [x] Feedback forms — inline expanding forms in settings, stored in `Feedback` table, visible in admin page
 
 ---
 
@@ -33,10 +24,16 @@
 
 ### 🎨 UI polish
 
-- [ ] **Raccoon mascot** — graduation gown + cap, expressive (happy/smug/tired states); replaces the scholar mark as the logo
-- [ ] **Rounder UI** — softer card corners, less sharp edges throughout; more approachable, less console-intimidating
-- [ ] **Flashcard micro-interactions** — shake on wrong answer, pulse/burst on correct; instant emotional feedback
-- [ ] **Level-up celebration** — modal or full-screen animation when XP threshold is hit; celebrate the win
+- [ ] **Raccoon mascot presence** — Duolingo-style character woven into the UI, not just the logo. SVG raccoon with distinct emotional states:
+  - `idle` — sitting calmly, default sidebar/empty state companion
+  - `happy` — arms up or tail wagging, shown after a correct answer or streak milestone
+  - `smug` — knowing look, shown on a streak ≥ 7 days or high mastery
+  - `tired` — droopy eyes, shown when the user hasn't practiced today
+  - `celebrating` — confetti / jumping pose, level-up moment
+  - Appears in: empty dashboard state, post-answer feedback, level-up modal (replaces plain text), streak card on progress page, onboarding completion
+- [x] **Rounder UI** — softer card corners, less sharp edges throughout; more approachable, less console-intimidating
+- [x] **Flashcard micro-interactions** — shake on wrong answer, pulse/burst on correct; instant emotional feedback
+- [x] **Level-up celebration** — modal or full-screen animation when XP threshold is hit; celebrate the win
 - [ ] **Progress animations** — XP bar fill, mastery ring, streak counter; motion throughout the app not just on events
 - [ ] **General animation pass** — page transitions, hover states, loading skeletons; polish builds trust
 
@@ -44,9 +41,6 @@
 
 ### ⚪ Nice to have
 
-- [x] Extension popup — blocked sites list with toggle/add/remove, synced to DB and settings page
-- [x] Extension logo — scholar mark PNG icons at 16/32/48/128px, transparent background
-- [x] Dumb mode — YouTube (no home feed, no sidebar, no Shorts, no comments), Instagram (redirects home/explore/reels → DMs, hides posts/stories on other pages), Reddit/Twitter/TikTok/Facebook (feed removed)
 - [x] Assessment-weighted paywall — urgency tiers (≤3d / ≤7d / ≤30d), ordered by nearest assessment date, then topic within assessment's week range
 - [ ] Force read delay — disable answer choices for 2–3s after flashcard appears so user has to read the question before clicking
 
