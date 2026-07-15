@@ -4,6 +4,7 @@ import { type Metadata } from "next";
 import { JetBrains_Mono, Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { ErrorReporter } from "~/components/providers/error-reporter";
 
 export const metadata: Metadata = {
   title: "Mastify — CS Practice Console",
@@ -28,7 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${jetbrains.variable} dark`}>
       <body className="font-mono antialiased">
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <ErrorReporter />
+          {children}
+        </TRPCReactProvider>
       </body>
     </html>
   );
