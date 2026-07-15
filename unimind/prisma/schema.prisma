@@ -41,6 +41,7 @@ model User {
 
   groupMemberships GroupMembership[]
   groupMessages    GroupMessage[]
+  problemAttempts  ProblemAttempt[]
 
   @@map("users")
 }
@@ -328,6 +329,7 @@ model Course {
   topics      Topic[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
+  problems    Problem[]
   startDate   DateTime?
   flexWeeks   Int[]        @default([]) // Calendar week numbers with no new content (e.g. [6] for UNSW T2)
 
@@ -348,6 +350,7 @@ model Topic {
   questions  Question[]
   userTopics UserTopic[]
   attempts   QuestionAttempt[]
+  problems   Problem[]
 
   @@index([courseId])
   @@map("topics")
@@ -418,4 +421,47 @@ model Assessment {
   @@index([courseId])
   @@index([date])
   @@map("assessments")
+}
+
+// ============================================
+// PROBLEMS (exam-style, LeetCode-style)
+// ============================================
+
+model Problem {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  difficulty  String   @default("medium") // "easy" | "medium" | "hard"
+  type        String   @default("code-writing") // "code-writing" | "code-tracing" | "short-answer" | "diagram"
+  description String   @db.Text  // markdown
+  hints       String[] // revealed progressively
+  solution    String   @db.Text  // markdown
+  courseId    String
+  topicId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  topic    Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  attempts ProblemAttempt[]
+
+  @@index([courseId])
+  @@index([topicId])
+  @@map("problems")
+}
+
+model ProblemAttempt {
+  id          String    @id @default(cuid())
+  userId      String    @db.Uuid
+  problemId   String
+  selfRated   Boolean?  // null = attempted but not self-rated; true = got it; false = needs review
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, problemId])
+  @@index([userId])
+  @@map("problem_attempts")
 }
