@@ -10,6 +10,11 @@ export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  trustedOrigins: [
+    "https://mastify.app",
+    "https://www.mastify.app",
+    "http://localhost:3000",
+  ],
   advanced: {
     database: {
       // Our User.id column is typed as UUID in Postgres; generate UUIDs in app code.
