@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { Flame, Brain } from "lucide-react";
+import { Raccoon } from "~/components/raccoon";
+import type { RaccoonMood } from "~/components/raccoon";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { CountUp } from "~/components/count-up";
 import { AnimatedBar } from "~/components/animated-bar";
@@ -169,6 +171,24 @@ export default async function ProgressPage() {
             <AnimatedBar pct={xpProgress} color="var(--color-phosphor)" delay={350} rounded />
           </div>
         </section>
+
+        {/* Streak companion */}
+        {(() => {
+          const streakMood: RaccoonMood =
+            stats.currentStreak >= 7 ? "smug" :
+            stats.currentStreak === 0 ? "tired" :
+            "idle";
+          const streakMsg =
+            stats.currentStreak >= 7 ? `${stats.currentStreak}-day streak — you're on fire.` :
+            stats.currentStreak === 0 ? "No streak yet — come back tomorrow." :
+            `${stats.currentStreak}-day streak. Keep it up!`;
+          return (
+            <section className="term-rise mt-4 flex items-center gap-4 rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] px-5 py-3" style={{ animationDelay: "350ms" }}>
+              <Raccoon mood={streakMood} size={52} />
+              <p className="font-sans text-[13px] text-[color:var(--color-fg-soft)]">{streakMsg}</p>
+            </section>
+          );
+        })()}
 
         <TopicList topics={stats.topics} />
 

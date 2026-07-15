@@ -44,7 +44,7 @@
 - [x] Assessment-weighted paywall — urgency tiers (≤3d / ≤7d / ≤30d), ordered by nearest assessment date, then topic within assessment's week range
 - [x] Force read delay — disable answer choices for 2–3s after flashcard appears so user has to read the question before clicking
 - [ ] **4th difficulty tier (LeetCode-hard)** — `difficulty = 4` questions; multi-step algorithm/proof style; distinct UI badge ("hard" in red/magenta); harder FSRS rating weight; seed a handful per topic
-- [ ] **"I don't know" button** — replaces guessing; sits alongside the answer choices; pressing it skips scoring (no penalty, no FSRS update) and opens a centre-screen modal showing the correct answer + explanation so the user actually learns before moving on; modal has a "Got it" button to continue
+- [x] **"I don't know" button** — replaces guessing; sits alongside the answer choices; pressing it skips scoring (no penalty, no FSRS update) and opens a centre-screen modal showing the correct answer + explanation so the user actually learns before moving on; modal has a "Got it" button to continue
 
 ---
 

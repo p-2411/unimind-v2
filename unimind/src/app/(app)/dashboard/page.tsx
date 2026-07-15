@@ -1,4 +1,5 @@
 import { Flame, Sparkles } from "lucide-react";
+import { Raccoon } from "~/components/raccoon";
 import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { CountUp } from "~/components/count-up";
@@ -194,8 +195,14 @@ export default async function Dashboard() {
               {nextQuestion ? (
                 <PreviewQuestion question={nextQuestion} />
               ) : (
-                <div className="rounded-xl border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
-                  No questions available yet.
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-8 text-center">
+                  <Raccoon mood="idle" size={72} />
+                  <p className="font-sans text-[13px] text-[color:var(--color-fg-soft)]">
+                    No questions available yet.
+                  </p>
+                  <p className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
+                    Enroll in a course to get started.
+                  </p>
                 </div>
               )}
             </div>
