@@ -10,11 +10,12 @@ export async function middleware(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/forgot-password";
+  const isPublicPage = pathname === "/privacy";
   const isAuthApi = pathname.startsWith("/api/auth");
   const isExtensionApi = pathname.startsWith("/api/extension");
 
   // Skip session check for routes that don't need it
-  if (isAuthApi || isExtensionApi) return NextResponse.next();
+  if (isAuthApi || isExtensionApi || isPublicPage) return NextResponse.next();
 
   const session = await auth.api.getSession({ headers: request.headers });
 
