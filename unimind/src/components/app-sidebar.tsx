@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Code2,
   LayoutGrid,
   ListOrdered,
   LogOut,
@@ -12,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { MastifyWordmark } from "~/components/logo";
+import { Raccoon } from "~/components/raccoon";
 import { signOut } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 import {
@@ -30,6 +32,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutGrid },
   { title: "Questions", url: "/questions", icon: ListOrdered },
+  { title: "Problems", url: "/problems", icon: Code2 },
   { title: "Progress", url: "/progress", icon: TrendingUp },
   { title: "Groups", url: "/groups", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -97,6 +100,14 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        <div className="mx-3 mb-1 border-t border-[color:var(--color-rule)]" />
+        <div className="flex items-end gap-2.5 px-3 py-1.5">
+          <Raccoon mood="idle" size={40} />
+          <div className="mb-1">
+            <div className="font-mono text-[10px] font-medium text-[color:var(--color-phosphor)]">Mastify</div>
+            <div className="font-mono text-[9px] text-[color:var(--color-fg-mute)]">CS practice companion</div>
+          </div>
+        </div>
         <div className="mx-3 mb-2 border-t border-[color:var(--color-rule)]" />
         <SidebarMenu>
           <SidebarMenuItem>
