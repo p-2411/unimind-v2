@@ -1,6 +1,6 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const SCHOLAR_SVG = `<svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M 26,50 L 26,70 A 24,24 0 0 0 74,70 L 74,50" stroke="#7cff6b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M 10,50 L 90,50" stroke="#7cff6b" stroke-width="5.5" stroke-linecap="round"/><path d="M 50,16 L 70,33 L 50,50 L 30,33 Z" stroke="#7cff6b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 70,33 L 78,54" stroke="#7cff6b" stroke-width="3" stroke-linecap="round" opacity="0.82"/><circle cx="78" cy="57" r="4" fill="#7cff6b"/></svg>`;
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://mastify.app';
 
 const DEFAULT_BLOCKED = [
   'youtube.com',

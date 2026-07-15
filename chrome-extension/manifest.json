@@ -29,7 +29,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost:3000/*", "https://mastify.app/*"],
+      "matches": ["https://mastify.app/*"],
       "js": ["auth-bridge.js"],
       "run_at": "document_idle"
     }
