@@ -1,7 +1,9 @@
-import { auth } from "~/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
 
-export const runtime = "nodejs";
+// Middleware runs on Edge runtime — no Prisma/DB calls allowed here.
+// Cookie existence is checked here for redirects; actual session verification
+// happens in the tRPC context on every server request.
+const SESSION_COOKIE = "better-auth.session_token";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,18 +16,17 @@ export async function middleware(request: NextRequest) {
   const isAuthApi = pathname.startsWith("/api/auth");
   const isExtensionApi = pathname.startsWith("/api/extension");
 
-  // Skip session check for routes that don't need it
   if (isAuthApi || isExtensionApi || isPublicPage) return NextResponse.next();
 
-  const session = await auth.api.getSession({ headers: request.headers });
+  const hasSession = !!request.cookies.get(SESSION_COOKIE)?.value;
 
-  if (!session && !isAuthPage) {
+  if (!hasSession && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (session && isAuthPage) {
+  if (hasSession && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
