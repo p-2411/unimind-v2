@@ -88,14 +88,62 @@
   font-size: 17px;
   line-height: 1.55;
   color: #dce1ea;
-  margin: 0 0 28px;
+  margin: 0 0 20px;
   font-weight: 400;
 }
+
+/* ── Read timer bar ─────────────────────────────────────────────────────────── */
+
+@keyframes um-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.um-timer-wrap {
+  height: 3px;
+  background: #1c2029;
+  margin-bottom: 24px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.um-timer-bar {
+  height: 100%;
+  background: #7cff6b;
+  transform-origin: left;
+  border-radius: 2px;
+  animation: um-fill 3s linear forwards;
+}
+
+.um-learn-timer-wrap {
+  height: 2px;
+  background: #1c2029;
+  margin: 8px 0 20px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.um-learn-timer-bar {
+  height: 100%;
+  background: #5cc8ff;
+  transform-origin: left;
+  border-radius: 2px;
+  animation: um-fill 4s linear forwards;
+}
+
+/* ── Choices ────────────────────────────────────────────────────────────────── */
 
 .um-choices {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  transition: opacity 0.5s;
+}
+
+.um-choices.um-locked {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
 }
 
 .um-choice {
@@ -136,7 +184,80 @@
   color: #9aa3b2;
 }
 
-/* Result screen */
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+
+.um-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.um-footer-hint {
+  font-size: 11px;
+  font-family: monospace;
+  color: #5a6474;
+  letter-spacing: 0.12em;
+}
+
+/* ── Learning panel ─────────────────────────────────────────────────────────── */
+
+.um-learn-eyebrow {
+  font-size: 10px;
+  font-family: monospace;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5a6474;
+  margin: 0 0 10px;
+}
+
+.um-learn-answer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border: 1px solid #7cff6b33;
+  background: #7cff6b08;
+  margin-bottom: 12px;
+}
+
+.um-learn-answer-label {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #7cff6b;
+  color: #07080a;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.um-learn-answer-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #dce1ea;
+}
+
+.um-learn-explanation {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #9aa3b2;
+  border-left: 2px solid #1c2029;
+  padding-left: 14px;
+  margin: 0 0 16px;
+}
+
+.um-learn-read-hint {
+  font-size: 10px;
+  font-family: monospace;
+  color: #5a6474;
+  letter-spacing: 0.12em;
+}
+
+/* ── Result screen ──────────────────────────────────────────────────────────── */
 
 .um-result {
   font-size: 22px;

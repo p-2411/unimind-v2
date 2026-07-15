@@ -28,7 +28,6 @@ function blockedListFromData(disabledDefaults, customBlocked) {
   return [...enabled, ...customBlocked];
 }
 
-// Always fetches from API when logged in — local storage is only a fallback.
 async function getBlockedList(authToken) {
   if (authToken) {
     try {
@@ -107,18 +106,59 @@ function showOverlay(content) {
   showPage();
 }
 
-function buildQuestionHTML(q) {
-  const labels = ['A', 'B', 'C', 'D'];
-  const choices = q.choices
-    .map(
-      (choice, i) => `
-      <button class="um-choice" data-index="${i}">
-        <span class="um-choice-label">${labels[i]}</span>
-        <span class="um-choice-text">${esc(choice)}</span>
-      </button>`,
-    )
-    .join('');
+// ── HTML builders ─────────────────────────────────────────────────────────────
 
+function buildChoicesHTML(q) {
+  const labels = ['A', 'B', 'C', 'D'];
+  return q.choices.map((choice, i) => `
+    <button class="um-choice" data-index="${i}">
+      <span class="um-choice-label">${labels[i]}</span>
+      <span class="um-choice-text">${esc(choice)}</span>
+    </button>`).join('');
+}
+
+// The swappable answer section: either choices+footer or learning panel
+function buildAnswerSectionHTML(q) {
+  return `
+    <div class="um-choices um-locked" id="um-choices">
+      ${buildChoicesHTML(q)}
+    </div>
+    <div class="um-footer" id="um-footer-locked">
+      <span class="um-footer-hint">Read the question…</span>
+    </div>
+    <div class="um-footer" id="um-footer-unlocked" style="display:none">
+      <button class="um-btn um-btn-ghost" id="um-dont-know" style="padding:7px 14px;font-size:11px;letter-spacing:0.08em">
+        Don&apos;t know
+      </button>
+    </div>
+  `;
+}
+
+function buildLearningPanelHTML(q) {
+  const labels = ['A', 'B', 'C', 'D'];
+  const explanation = q.explanation
+    ? `<p class="um-learn-explanation">${esc(q.explanation)}</p>`
+    : '';
+  return `
+    <p class="um-learn-eyebrow">The answer</p>
+    <div class="um-learn-answer">
+      <span class="um-learn-answer-label">${labels[q.answerIndex]}</span>
+      <span class="um-learn-answer-text">${esc(q.choices[q.answerIndex])}</span>
+    </div>
+    ${explanation}
+    <p class="um-learn-read-hint">Read before answering…</p>
+    <div class="um-learn-timer-wrap">
+      <div class="um-learn-timer-bar"></div>
+    </div>
+    <div id="um-got-it-wrap" style="display:none">
+      <button class="um-btn um-btn-primary" id="um-got-it" style="width:100%;justify-content:center">
+        Got it — let me answer
+      </button>
+    </div>
+  `;
+}
+
+function buildQuestionHTML(q) {
   const diffLabel = q.difficulty === 1 ? 'Easy' : q.difficulty === 2 ? 'Medium' : 'Hard';
   const diffClass = q.difficulty === 1 ? 'um-diff-easy' : q.difficulty === 2 ? 'um-diff-medium' : 'um-diff-hard';
 
@@ -133,7 +173,12 @@ function buildQuestionHTML(q) {
       </div>
       <p class="um-prompt">Answer to continue</p>
       <p class="um-question">${esc(q.question)}</p>
-      <div class="um-choices">${choices}</div>
+      <div class="um-timer-wrap">
+        <div class="um-timer-bar"></div>
+      </div>
+      <div id="um-answer-section">
+        ${buildAnswerSectionHTML(q)}
+      </div>
     </div>
   `;
 }
@@ -225,7 +270,8 @@ function buildFetchErrorHTML() {
   `;
 }
 
-// Returns the question object, null (no questions), 'unauthorized', or 'error'.
+// ── API ───────────────────────────────────────────────────────────────────────
+
 async function fetchQuestion() {
   try {
     const resp = await fetch(`${API_BASE}/api/extension/question`, {
@@ -265,33 +311,28 @@ async function submitAnswer(choiceIndex, rating, timeSpentMs) {
   }
 }
 
-// FSRS rating derived from time spent (can't know correctness before submitting).
 function deriveRating(timeSpentMs) {
   if (timeSpentMs < 8000) return 4;
   if (timeSpentMs < 20000) return 3;
   return 2;
 }
 
-function attachOverlayHandlers() {
+// ── Handlers ──────────────────────────────────────────────────────────────────
+
+function attachChoiceHandlers() {
   overlayEl.querySelectorAll('.um-choice').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const choiceIndex = parseInt(btn.dataset.index, 10);
       const timeSpentMs = Date.now() - startedAt;
 
-      // Disable all buttons during submission
       overlayEl.querySelectorAll('.um-choice').forEach((b) => {
         b.disabled = true;
         b.style.pointerEvents = 'none';
       });
 
-      const result = await submitAnswer(
-        choiceIndex,
-        deriveRating(timeSpentMs),
-        timeSpentMs,
-      );
+      const result = await submitAnswer(choiceIndex, deriveRating(timeSpentMs), timeSpentMs);
 
       if (!result) {
-        // API error — let them through
         await grantTab();
         overlayEl.remove();
         overlayEl = null;
@@ -300,43 +341,94 @@ function attachOverlayHandlers() {
       }
 
       const { isCorrect, answerIndex, explanation } = result;
-
       showOverlay(buildResultHTML(isCorrect, answerIndex, explanation, currentQuestion.choices));
-
-      const continueBtn = document.getElementById('um-continue');
-      const retryBtn = document.getElementById('um-retry');
-
-      if (continueBtn) {
-        continueBtn.addEventListener('click', async () => {
-          if (isCorrect) await grantTab();
-          overlayEl.remove();
-          overlayEl = null;
-          showPage();
-        });
-      }
-
-      if (retryBtn) {
-        retryBtn.addEventListener('click', async () => {
-          startedAt = Date.now();
-          currentQuestion = await fetchQuestion();
-          if (currentQuestion === 'unauthorized') {
-            showOverlay(buildSessionExpiredHTML());
-            attachSkipHandler();
-          } else if (currentQuestion === 'error') {
-            showOverlay(buildFetchErrorHTML());
-            attachSkipHandler();
-            attachRetryFetchHandler();
-          } else if (!currentQuestion) {
-            showOverlay(buildNoQuestionsHTML());
-            attachSkipHandler();
-          } else {
-            showOverlay(buildQuestionHTML(currentQuestion));
-            attachOverlayHandlers();
-          }
-        });
-      }
+      attachResultHandlers(isCorrect);
     });
   });
+}
+
+function attachResultHandlers(isCorrect) {
+  const continueBtn = document.getElementById('um-continue');
+  const retryBtn = document.getElementById('um-retry');
+
+  if (continueBtn) {
+    continueBtn.addEventListener('click', async () => {
+      if (isCorrect) await grantTab();
+      overlayEl.remove();
+      overlayEl = null;
+      showPage();
+    });
+  }
+
+  if (retryBtn) {
+    retryBtn.addEventListener('click', async () => {
+      startedAt = Date.now();
+      currentQuestion = await fetchQuestion();
+      if (currentQuestion === 'unauthorized') {
+        showOverlay(buildSessionExpiredHTML());
+        attachSkipHandler();
+      } else if (currentQuestion === 'error') {
+        showOverlay(buildFetchErrorHTML());
+        attachSkipHandler();
+        attachRetryFetchHandler();
+      } else if (!currentQuestion) {
+        showOverlay(buildNoQuestionsHTML());
+        attachSkipHandler();
+      } else {
+        showOverlay(buildQuestionHTML(currentQuestion));
+        attachOverlayHandlers();
+      }
+    });
+  }
+}
+
+function attachOverlayHandlers() {
+  // 3s unlock: reveal choices and swap footer
+  const unlockTimer = setTimeout(() => {
+    const choices = overlayEl?.querySelector('#um-choices');
+    const footerLocked = overlayEl?.querySelector('#um-footer-locked');
+    const footerUnlocked = overlayEl?.querySelector('#um-footer-unlocked');
+    if (choices) choices.classList.remove('um-locked');
+    if (footerLocked) footerLocked.style.display = 'none';
+    if (footerUnlocked) footerUnlocked.style.display = 'flex';
+  }, 3000);
+
+  // "Don't know" — enter learning mode
+  const dontKnowHandler = (e) => {
+    if (!e.target.closest('#um-dont-know')) return;
+    overlayEl.removeEventListener('click', dontKnowHandler);
+
+    // Replace answer section with learning panel
+    const section = overlayEl.querySelector('#um-answer-section');
+    if (section) section.innerHTML = buildLearningPanelHTML(currentQuestion);
+
+    // After 4s show "Got it" button
+    setTimeout(() => {
+      const wrap = overlayEl?.querySelector('#um-got-it-wrap');
+      if (wrap) wrap.style.display = 'block';
+    }, 4000);
+
+    // "Got it" — restore choices for one final answer
+    const gotItHandler = (e2) => {
+      if (!e2.target.closest('#um-got-it')) return;
+      overlayEl.removeEventListener('click', gotItHandler);
+
+      const section2 = overlayEl.querySelector('#um-answer-section');
+      if (section2) section2.innerHTML = buildAnswerSectionHTML(currentQuestion);
+
+      // Choices start unlocked since the lock period already passed
+      const choices = overlayEl.querySelector('#um-choices');
+      const footerLocked = overlayEl.querySelector('#um-footer-locked');
+      if (choices) choices.classList.remove('um-locked');
+      if (footerLocked) footerLocked.style.display = 'none';
+
+      attachChoiceHandlers();
+    };
+    overlayEl.addEventListener('click', gotItHandler);
+  };
+  overlayEl.addEventListener('click', dontKnowHandler);
+
+  attachChoiceHandlers();
 }
 
 function attachSkipHandler() {
@@ -382,7 +474,6 @@ function attachRetryFetchHandler() {
   const granted = await checkGranted();
   if (granted) return;
 
-  // Only hide AFTER confirming this page needs blocking.
   hidePageInstantly();
 
   if (!token) {
