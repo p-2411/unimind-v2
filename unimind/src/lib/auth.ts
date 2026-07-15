@@ -4,7 +4,7 @@ import { bearer } from "better-auth/plugins";
 import { Resend } from "resend";
 import { db } from "~/server/db";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),

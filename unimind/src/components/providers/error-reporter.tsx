@@ -13,15 +13,15 @@ function report(message: string, stack: string | undefined, context: string) {
 export function ErrorReporter() {
   useEffect(() => {
     function onError(event: ErrorEvent) {
-      report(event.message, event.error?.stack as string | undefined, "window.onerror");
+      const stack = event.error instanceof Error ? event.error.stack : undefined;
+      report(event.message, stack, "window.onerror");
     }
     function onUnhandledRejection(event: PromiseRejectionEvent) {
-      const reason = event.reason as { message?: string; stack?: string } | string | undefined;
-      const message = typeof reason === "object" && reason !== null
-        ? (reason.message ?? String(reason))
-        : String(reason ?? "Unhandled promise rejection");
-      const stack = typeof reason === "object" && reason !== null ? reason.stack : undefined;
-      report(message, stack, "unhandledrejection");
+      if (event.reason instanceof Error) {
+        report(event.reason.message, event.reason.stack, "unhandledrejection");
+      } else {
+        report("Unhandled rejection", undefined, "unhandledrejection");
+      }
     }
 
     window.addEventListener("error", onError);

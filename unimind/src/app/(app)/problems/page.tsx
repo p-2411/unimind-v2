@@ -3,7 +3,6 @@ import { CheckCircle2, Circle, Clock } from "lucide-react";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { api } from "~/trpc/server";
 
-const DIFF_ORDER = { easy: 0, medium: 1, hard: 2 };
 const TYPE_LABEL: Record<string, string> = {
   "code-writing": "Code",
   "code-tracing": "Trace",
@@ -15,7 +14,7 @@ export default async function ProblemsPage() {
   const problems = await api.problem.list();
 
   const solved = problems.filter((p) => p.attempt?.selfRated === true).length;
-  const attempted = problems.filter((p) => p.attempt && p.attempt.selfRated === null).length;
+  const attempted = problems.filter((p) => p.attempt?.selfRated === null && p.attempt !== null).length;
 
   return (
     <div className="min-h-svh bg-[color:var(--color-void)] text-[color:var(--color-fg)]">

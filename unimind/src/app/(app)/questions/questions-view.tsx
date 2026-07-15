@@ -45,7 +45,7 @@ export function QuestionsView() {
   }, [topicsQuery.data]);
 
   const sorted = useMemo(() => {
-    let list = [...(questionsQuery.data ?? [])];
+    const list = [...(questionsQuery.data ?? [])];
     if (sort === "Difficulty") list.sort((a, b) => a.difficulty - b.difficulty);
     if (sort === "Topic") list.sort((a, b) => a.topic.name.localeCompare(b.topic.name));
     if (seedId) {
@@ -538,7 +538,7 @@ function QuestionCard({
                   <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">
                     Answer:{" "}
                     <span className="text-[color:var(--color-fg)]">
-                      {LETTERS[result!.answerIndex]} — {q.choices[result!.answerIndex]}
+                      {result && LETTERS[result.answerIndex]} — {result && q.choices[result.answerIndex]}
                     </span>
                   </span>
                 </div>

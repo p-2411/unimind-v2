@@ -27,7 +27,7 @@ export function TopicList({ topics }: { topics: Topics }) {
   function toggle(topicId: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(topicId) ? next.delete(topicId) : next.add(topicId);
+      if (next.has(topicId)) { next.delete(topicId); } else { next.add(topicId); }
       return next;
     });
   }
