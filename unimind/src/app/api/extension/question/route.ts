@@ -49,7 +49,6 @@ export async function GET(req: Request) {
   });
   if (!q) return NextResponse.json({ question: null }, { status: 200, headers: CORS });
 
-  const { choices } = shuffleChoices(q.id, q.choices, q.answerIndex);
-  const { answerIndex: _, ...rest } = { ...q, choices };
-  return NextResponse.json({ question: rest }, { status: 200, headers: CORS });
+  const { choices, answerIndex } = shuffleChoices(q.id, q.choices, q.answerIndex);
+  return NextResponse.json({ question: { ...q, choices, answerIndex } }, { status: 200, headers: CORS });
 }
