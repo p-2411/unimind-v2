@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
+import { Raccoon } from "~/components/raccoon";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { DIFFICULTIES, difficultyLabel } from "~/lib/question-display";
@@ -326,10 +327,19 @@ function QuestionCard({
   checking: boolean;
 }) {
   const [locked, setLocked] = useState(true);
+  const [learningMode, setLearningMode] = useState(false);
+  const [learningReady, setLearningReady] = useState(false);
+
   useEffect(() => {
-    const t = setTimeout(() => setLocked(false), 2000);
+    const t = setTimeout(() => setLocked(false), 3000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (!learningMode) return;
+    const t = setTimeout(() => setLearningReady(true), 4000);
+    return () => clearTimeout(t);
+  }, [learningMode]);
 
   const revealed = result !== null;
   const correct = result?.isCorrect ?? false;
@@ -342,6 +352,7 @@ function QuestionCard({
         isFlashing ? "correct-flash" : "",
       ].join(" ")}
     >
+      {/* Header */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2">
         <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-fg-mute)]">
           {String(index).padStart(2, "0")}
@@ -362,6 +373,7 @@ function QuestionCard({
         </span>
       </div>
 
+      {/* Question text */}
       <div className="flex items-start gap-3 px-5 py-4">
         <span aria-hidden className="select-none pt-0.5 font-mono text-[16px] leading-none text-[color:var(--color-phosphor)]">
           &gt;
@@ -371,104 +383,175 @@ function QuestionCard({
         </h3>
       </div>
 
-      <ul className={`grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 transition-opacity duration-300 ${locked && !revealed ? "pointer-events-none opacity-40" : ""}`}>
-        {q.choices.map((c, i) => {
-          const isPicked = picked === i;
-          const isAnswer = revealed && result !== null && i === result.answerIndex;
-          const isWrongPick = revealed && isPicked && !isAnswer;
-
-          const bg = isAnswer
-            ? "bg-[color:var(--color-phosphor)]/15"
-            : isWrongPick
-              ? "bg-[color:var(--color-red)]/12"
-              : isPicked
-                ? "bg-[color:var(--color-cyan)]/10"
-                : "bg-[color:var(--color-panel)] hover:bg-[color:var(--color-panel-hi)]";
-
-          const chipCls = isAnswer
-            ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
-            : isWrongPick
-              ? "border-[color:var(--color-red)] bg-[color:var(--color-red)] text-[color:var(--color-void)]"
-              : isPicked
-                ? "border-[color:var(--color-cyan)] bg-[color:var(--color-cyan)] text-[color:var(--color-void)]"
-                : "border-[color:var(--color-rule-hi)] text-[color:var(--color-fg-mute)] group-hover:border-[color:var(--color-fg-soft)]";
-
-          return (
-            <li key={i}>
-              <button
-                type="button"
-                disabled={revealed}
-                onClick={() => onPick(i)}
-                className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-all ${bg} ${revealed ? "cursor-default" : "hover:translate-x-0.5"}`}
-              >
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border font-mono text-[11px] transition-colors ${chipCls}`}>
-                  {LETTERS[i]}
-                </span>
-                <span className="font-sans text-[13.5px] leading-snug text-[color:var(--color-fg)]">
-                  {c}
-                </span>
-                {isAnswer && <Check className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-phosphor)]" strokeWidth={2.2} />}
-                {isWrongPick && <X className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-red)]" strokeWidth={2.2} />}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2.5">
-        {locked && !revealed ? (
-          <div className="flex w-full items-center gap-3">
-            <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">Read the question…</span>
-            <div className="ml-auto h-0.5 w-24 overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
-              <div className="read-timer h-full rounded-full bg-[color:var(--color-phosphor)]/60" />
-            </div>
+      {/* Read timer bar — spans full width below question, visible only during lock */}
+      {locked && !revealed && !learningMode && (
+        <div className="px-5 pb-3">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+            <div className="read-timer h-full rounded-full bg-[color:var(--color-phosphor)]" />
           </div>
-        ) : !revealed ? (
-          <>
-            <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
-              {picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}
+        </div>
+      )}
+
+      {/* Choices OR learning panel */}
+      {learningMode ? (
+        <div className="border-t border-[color:var(--color-rule)]">
+          <div className="space-y-3 px-5 py-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
+              The answer
             </span>
-            <button
-              type="button"
-              disabled={picked === null || checking}
-              onClick={onCheck}
-              className={[
-                "ml-auto rounded-lg border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-all",
-                picked === null
-                  ? "cursor-not-allowed border-[color:var(--color-rule)] text-[color:var(--color-fg-mute)]/60"
-                  : "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)] hover:bg-[color:var(--color-phosphor)]/90 shadow-[0_0_16px_-6px_var(--color-phosphor)] active:scale-[0.97]",
-              ].join(" ")}
-            >
-              Check
-            </button>
-          </>
-        ) : (
-          <div className="flex w-full flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em]"
-                style={{
-                  background: correct ? "var(--color-phosphor)" : "var(--color-red)",
-                  color: "var(--color-void)",
-                }}
-              >
-                {correct ? "Correct" : "Incorrect"}
+            <div className="flex items-center gap-3 rounded-lg border border-[color:var(--color-phosphor)]/25 bg-[color:var(--color-phosphor)]/8 px-4 py-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] font-mono text-[11px] text-[color:var(--color-void)]">
+                {LETTERS[q.answerIndex]}
               </span>
-              <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">
-                Answer:{" "}
-                <span className="text-[color:var(--color-fg)]">
-                  {LETTERS[result!.answerIndex]} — {q.choices[result!.answerIndex]}
-                </span>
+              <span className="font-sans text-[14px] leading-snug text-[color:var(--color-fg)]">
+                {q.choices[q.answerIndex]}
               </span>
             </div>
-            {result?.explanation && (
-              <p className="font-sans text-[12.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
-                {result.explanation}
+            {q.explanation && (
+              <p className="font-sans text-[13px] leading-relaxed text-[color:var(--color-fg-soft)]">
+                {q.explanation}
               </p>
             )}
           </div>
-        )}
-      </div>
+
+          <div className="border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-5 py-3">
+            {learningReady ? (
+              <button
+                type="button"
+                onClick={() => { setLearningMode(false); setLearningReady(false); }}
+                className="w-full rounded-lg border border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-void)] shadow-[0_0_16px_-6px_var(--color-phosphor)] transition-all hover:bg-[color:var(--color-phosphor)]/90 active:scale-[0.97]"
+              >
+                Got it — let me answer
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <span className="font-mono text-[10px] text-[color:var(--color-fg-mute)]">
+                  Read before answering…
+                </span>
+                <div className="h-0.5 w-full overflow-hidden rounded-full bg-[color:var(--color-rule-hi)]">
+                  <div key="learn" className="learn-timer h-full rounded-full bg-[color:var(--color-cyan)]" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <ul
+          className={[
+            "grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2",
+            locked && !revealed
+              ? "pointer-events-none select-none opacity-0"
+              : "opacity-100 transition-opacity duration-500",
+          ].join(" ")}
+        >
+          {q.choices.map((c, i) => {
+            const isPicked = picked === i;
+            const isAnswer = revealed && result !== null && i === result.answerIndex;
+            const isWrongPick = revealed && isPicked && !isAnswer;
+
+            const bg = isAnswer
+              ? "bg-[color:var(--color-phosphor)]/15"
+              : isWrongPick
+                ? "bg-[color:var(--color-red)]/12"
+                : isPicked
+                  ? "bg-[color:var(--color-cyan)]/10"
+                  : "bg-[color:var(--color-panel)] hover:bg-[color:var(--color-panel-hi)]";
+
+            const chipCls = isAnswer
+              ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
+              : isWrongPick
+                ? "border-[color:var(--color-red)] bg-[color:var(--color-red)] text-[color:var(--color-void)]"
+                : isPicked
+                  ? "border-[color:var(--color-cyan)] bg-[color:var(--color-cyan)] text-[color:var(--color-void)]"
+                  : "border-[color:var(--color-rule-hi)] text-[color:var(--color-fg-mute)] group-hover:border-[color:var(--color-fg-soft)]";
+
+            return (
+              <li key={i}>
+                <button
+                  type="button"
+                  disabled={revealed}
+                  onClick={() => onPick(i)}
+                  className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-all ${bg} ${revealed ? "cursor-default" : "hover:translate-x-0.5"}`}
+                >
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border font-mono text-[11px] transition-colors ${chipCls}`}>
+                    {LETTERS[i]}
+                  </span>
+                  <span className="font-sans text-[13.5px] leading-snug text-[color:var(--color-fg)]">
+                    {c}
+                  </span>
+                  {isAnswer && <Check className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-phosphor)]" strokeWidth={2.2} />}
+                  {isWrongPick && <X className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-red)]" strokeWidth={2.2} />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* Footer */}
+      {!learningMode && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2.5">
+          {locked && !revealed ? (
+            <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
+              Read the question…
+            </span>
+          ) : !revealed ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setLearningMode(true)}
+                className="rounded-lg border border-[color:var(--color-rule-hi)] px-3 py-1 font-mono text-[11px] text-[color:var(--color-fg-mute)] transition-all hover:border-[color:var(--color-fg-soft)] hover:text-[color:var(--color-fg)]"
+              >
+                Don&apos;t know
+              </button>
+              <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
+                {picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}
+              </span>
+              <button
+                type="button"
+                disabled={picked === null || checking}
+                onClick={onCheck}
+                className={[
+                  "ml-auto rounded-lg border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-all",
+                  picked === null
+                    ? "cursor-not-allowed border-[color:var(--color-rule)] text-[color:var(--color-fg-mute)]/60"
+                    : "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)] hover:bg-[color:var(--color-phosphor)]/90 shadow-[0_0_16px_-6px_var(--color-phosphor)] active:scale-[0.97]",
+                ].join(" ")}
+              >
+                Check
+              </button>
+            </>
+          ) : (
+            <div className="flex w-full items-start gap-2.5">
+              <Raccoon mood={correct ? "happy" : "idle"} size={36} className="shrink-0 -mb-1" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em]"
+                    style={{
+                      background: correct ? "var(--color-phosphor)" : "var(--color-red)",
+                      color: "var(--color-void)",
+                    }}
+                  >
+                    {correct ? "Correct" : "Incorrect"}
+                  </span>
+                  <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">
+                    Answer:{" "}
+                    <span className="text-[color:var(--color-fg)]">
+                      {LETTERS[result!.answerIndex]} — {q.choices[result!.answerIndex]}
+                    </span>
+                  </span>
+                </div>
+                {result?.explanation && (
+                  <p className="font-sans text-[12.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
+                    {result.explanation}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }
