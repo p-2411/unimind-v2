@@ -2,16 +2,6 @@ import { PrismaClient } from "../generated/prisma";
 import initialDataRaw from "./initial_data.json";
 
 const initialData = initialDataRaw as {
-  users: { id: string; [k: string]: unknown }[];
-  userStats: {
-    id: string; userId: string; totalQuestionsAnswered: number;
-    totalCorrectAnswers: number; totalTimeSpent: number; level: number;
-    xp: number; currentStreak: number; longestStreak: number;
-    lastActiveDate: string | null;
-  }[];
-  userTopics: { id: string; userId: string; topicId: string; score: number }[];
-  courseEnrollments: { userId: string; courseId: string }[];
-  assessmentUsers: { assessmentId: string; userId: string }[];
   courses: { id: string; name: string; description: string; color: string; icon: string; startDate: string | null; flexWeeks?: number[] }[];
   topics: { id: string; name: string; description: string; courseId: string; weekNumber?: number | null }[];
   subtopics: { id: string; name: string; description: string; topicId: string }[];
@@ -22,170 +12,98 @@ const initialData = initialDataRaw as {
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting database seed...\n");
-
-  // Clear course content only — real users (via Supabase auth) are preserved
-  console.log("🗑️  Clearing existing course data...");
-  await prisma.problemAttempt.deleteMany();
-  await prisma.problem.deleteMany();
-  await prisma.questionAttempt.deleteMany();
-  await prisma.userQuestion.deleteMany();
-  await prisma.question.deleteMany();
-  await prisma.subtopic.deleteMany();
-  await prisma.userTopic.deleteMany();
-  await prisma.userCourse.deleteMany();
-  await prisma.topic.deleteMany();
-  await prisma.assessment.deleteMany();
-  await prisma.course.deleteMany();
+  console.log("🌱 Starting database seed (upsert-only — no user data touched)...\n");
 
   // Seed Courses
-  console.log("📚 Seeding courses...");
+  console.log("📚 Upserting courses...");
   for (const course of initialData.courses) {
-    await prisma.course.create({
-      data: {
-        id: course.id,
-        name: course.name,
-        description: course.description,
-        color: course.color,
-        icon: course.icon,
-        startDate: course.startDate ? new Date(course.startDate) : null,
-        flexWeeks: course.flexWeeks ?? [],
-      },
+    const data = {
+      name: course.name,
+      description: course.description,
+      color: course.color,
+      icon: course.icon,
+      startDate: course.startDate ? new Date(course.startDate) : null,
+      flexWeeks: course.flexWeeks ?? [],
+    };
+    await prisma.course.upsert({
+      where: { id: course.id },
+      create: { id: course.id, ...data },
+      update: data,
     });
   }
-  console.log(`   ✓ Created ${initialData.courses.length} courses`);
+  console.log(`   ✓ Upserted ${initialData.courses.length} courses`);
 
   // Seed Topics
-  console.log("📖 Seeding topics...");
+  console.log("📖 Upserting topics...");
   for (const topic of initialData.topics) {
-    await prisma.topic.create({
-      data: {
-        id: topic.id,
-        name: topic.name,
-        description: topic.description,
-        courseId: topic.courseId,
-        weekNumber: topic.weekNumber ?? null,
-      },
+    const data = {
+      name: topic.name,
+      description: topic.description,
+      courseId: topic.courseId,
+      weekNumber: topic.weekNumber ?? null,
+    };
+    await prisma.topic.upsert({
+      where: { id: topic.id },
+      create: { id: topic.id, ...data },
+      update: data,
     });
   }
-  console.log(`   ✓ Created ${initialData.topics.length} topics`);
+  console.log(`   ✓ Upserted ${initialData.topics.length} topics`);
 
   // Seed Subtopics
-  console.log("📑 Seeding subtopics...");
+  console.log("📑 Upserting subtopics...");
   for (const subtopic of initialData.subtopics) {
-    await prisma.subtopic.create({
-      data: {
-        id: subtopic.id,
-        name: subtopic.name,
-        description: subtopic.description,
-        topicId: subtopic.topicId,
-      },
+    const data = {
+      name: subtopic.name,
+      description: subtopic.description,
+      topicId: subtopic.topicId,
+    };
+    await prisma.subtopic.upsert({
+      where: { id: subtopic.id },
+      create: { id: subtopic.id, ...data },
+      update: data,
     });
   }
-  console.log(`   ✓ Created ${initialData.subtopics.length} subtopics`);
+  console.log(`   ✓ Upserted ${initialData.subtopics.length} subtopics`);
 
   // Seed Questions
-  console.log("❓ Seeding questions...");
+  console.log("❓ Upserting questions...");
   for (const question of initialData.questions) {
-    await prisma.question.create({
-      data: {
-        id: question.id,
-        question: question.question,
-        choices: question.choices,
-        answerIndex: question.answerIndex,
-        explanation: question.explanation,
-        difficulty: question.difficulty,
-        topicId: question.topicId,
-        subtopicId: question.subtopicId,
-      },
+    const data = {
+      question: question.question,
+      choices: question.choices,
+      answerIndex: question.answerIndex,
+      explanation: question.explanation,
+      difficulty: question.difficulty,
+      topicId: question.topicId,
+      subtopicId: question.subtopicId,
+    };
+    await prisma.question.upsert({
+      where: { id: question.id },
+      create: { id: question.id, ...data },
+      update: data,
     });
   }
-  console.log(`   ✓ Created ${initialData.questions.length} questions`);
+  console.log(`   ✓ Upserted ${initialData.questions.length} questions`);
 
   // Seed Assessments
-  console.log("📝 Seeding assessments...");
+  console.log("📝 Upserting assessments...");
   for (const assessment of initialData.assessments) {
-    await prisma.assessment.create({
-      data: {
-        id: assessment.id,
-        name: assessment.name,
-        courseId: assessment.courseId,
-        date: new Date(assessment.date),
-        description: assessment.description,
-        weekFrom: assessment.weekFrom ?? null,
-        weekTo: assessment.weekTo ?? null,
-      },
+    const data = {
+      name: assessment.name,
+      courseId: assessment.courseId,
+      date: new Date(assessment.date),
+      description: assessment.description,
+      weekFrom: assessment.weekFrom ?? null,
+      weekTo: assessment.weekTo ?? null,
+    };
+    await prisma.assessment.upsert({
+      where: { id: assessment.id },
+      create: { id: assessment.id, ...data },
+      update: data,
     });
   }
-  console.log(`   ✓ Created ${initialData.assessments.length} assessments`);
-
-  // Seed UserStats
-  console.log("📊 Seeding user stats...");
-  for (const stats of initialData.userStats) {
-    await prisma.userStats.create({
-      data: {
-        id: stats.id,
-        userId: stats.userId,
-        totalQuestionsAnswered: stats.totalQuestionsAnswered,
-        totalCorrectAnswers: stats.totalCorrectAnswers,
-        totalTimeSpent: stats.totalTimeSpent,
-        level: stats.level,
-        xp: stats.xp,
-        currentStreak: stats.currentStreak,
-        longestStreak: stats.longestStreak,
-        lastActiveDate: stats.lastActiveDate
-          ? new Date(stats.lastActiveDate)
-          : null,
-      },
-    });
-  }
-  console.log(`   ✓ Created ${initialData.userStats.length} user stats`);
-
-  // Seed UserTopics (with topic name lookup)
-  console.log("🎯 Seeding user topics...");
-  const topicMap = new Map(initialData.topics.map((t) => [t.id, t.name]));
-  for (const userTopic of initialData.userTopics) {
-    await prisma.userTopic.create({
-      data: {
-        id: userTopic.id,
-        userId: userTopic.userId,
-        topicId: userTopic.topicId,
-        topicName: topicMap.get(userTopic.topicId) ?? "Untitled",
-        masteryScore: userTopic.score,
-      },
-    });
-  }
-  console.log(`   ✓ Created ${initialData.userTopics.length} user topics`);
-
-  // Seed Course Enrollments (many-to-many)
-  console.log("🔗 Seeding course enrollments...");
-  for (const enrollment of initialData.courseEnrollments) {
-    await prisma.userCourse.create({
-      data: {
-        userId: enrollment.userId,
-        courseId: enrollment.courseId,
-      },
-    });
-  }
-  console.log(
-    `   ✓ Created ${initialData.courseEnrollments.length} course enrollments`
-  );
-
-  // Seed Assessment-User relations (many-to-many)
-  console.log("🔗 Seeding assessment registrations...");
-  for (const registration of initialData.assessmentUsers) {
-    await prisma.assessment.update({
-      where: { id: registration.assessmentId },
-      data: {
-        users: {
-          connect: { id: registration.userId },
-        },
-      },
-    });
-  }
-  console.log(
-    `   ✓ Created ${initialData.assessmentUsers.length} assessment registrations`
-  );
+  console.log(`   ✓ Upserted ${initialData.assessments.length} assessments`);
 
   // ── Problems ──────────────────────────────────────────────────────────────
   console.log("🧩 Seeding exam problems...");
