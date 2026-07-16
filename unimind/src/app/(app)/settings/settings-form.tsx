@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   AlertTriangle,
   Check,
   ChevronDown,
   ChevronUp,
+  Search,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -197,12 +199,25 @@ export function SettingsForm({
     () => Object.fromEntries(initialCourses.filter((c) => c.weekOverride !== null).map((c) => [c.id, c.weekOverride!])),
   );
   const [unenrollConfirm, setUnenrollConfirm] = useState<string | null>(null);
+  const [courseSearch, setCourseSearch] = useState("");
+
+  function matchesCourse(course: Course, query: string) {
+    const q = query.toLowerCase();
+    const target = course.name.toLowerCase();
+    return q.split(/\s+/).every((word) => word && target.includes(word));
+  }
+
+  const searchResults = courseSearch.trim()
+    ? courses.filter((c) => !c.enrolled && matchesCourse(c, courseSearch)).slice(0, 8)
+    : [];
 
   const enroll = api.course.enroll.useMutation({
-    onSuccess: (_, { courseId }) =>
+    onSuccess: (_, { courseId }) => {
       setCourses((prev) =>
         prev.map((c) => (c.id === courseId ? { ...c, enrolled: true } : c)),
-      ),
+      );
+      setCourseSearch("");
+    },
   });
 
   const unenroll = api.course.unenroll.useMutation({
@@ -223,14 +238,6 @@ export function SettingsForm({
       router.push("/login");
     },
   });
-
-  function handleCourseToggle(course: Course) {
-    if (course.enrolled) {
-      setUnenrollConfirm(course.id);
-    } else {
-      enroll.mutate({ courseId: course.id });
-    }
-  }
 
   function adjustWeek(courseId: string, delta: number) {
     const course = courses.find((c) => c.id === courseId);
@@ -430,81 +437,130 @@ export function SettingsForm({
         style={{ animationDelay: "120ms" }}
       >
         <SectionHead title="Courses" />
-        <ul className="divide-y divide-[color:var(--color-rule)] border border-[color:var(--color-rule)]">
-          {courses.map((course) => (
-            <li key={course.id} className="bg-[color:var(--color-panel)]">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <button
-                  onClick={() => handleCourseToggle(course)}
-                  disabled={enroll.isPending || unenroll.isPending}
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
-                    course.enrolled
-                      ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
-                      : "border-[color:var(--color-rule-hi)] text-transparent hover:border-[color:var(--color-fg-soft)]"
-                  }`}
-                >
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                </button>
-                <span className="flex-1 font-sans text-[13px] text-[color:var(--color-fg)]">
-                  {course.name}
-                </span>
-              </div>
 
-              {unenrollConfirm === course.id && (
-                <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-amber)]" />
-                  <span className="flex-1 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
-                    This deletes all your progress for this course.
+        {/* Enrolled list */}
+        {courses.filter((c) => c.enrolled).length === 0 ? (
+          <p className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">No courses enrolled yet.</p>
+        ) : (
+          <ul className="divide-y divide-[color:var(--color-rule)] border border-[color:var(--color-rule)]">
+            {courses.filter((c) => c.enrolled).map((course) => (
+              <li key={course.id} className="bg-[color:var(--color-panel)]">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex-1 font-sans text-[13px] text-[color:var(--color-fg)]">
+                    {course.name}
                   </span>
                   <button
-                    onClick={() => setUnenrollConfirm(null)}
-                    className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase hover:text-[color:var(--color-fg)]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => unenroll.mutate({ courseId: course.id })}
+                    onClick={() => setUnenrollConfirm(course.id)}
                     disabled={unenroll.isPending}
-                    className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-red)] uppercase hover:opacity-80"
+                    className="shrink-0 text-[color:var(--color-fg-mute)] transition-colors hover:text-[color:var(--color-red)]"
+                    title="Unenroll"
                   >
-                    Confirm
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-              )}
 
-              {course.enrolled && unenrollConfirm !== course.id && (
-                <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
-                  <span className="font-mono text-[11px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase">
-                    Week
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => adjustWeek(course.id, -1)}
-                      className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                    <span className="w-6 text-center font-mono text-[13px] text-[color:var(--color-phosphor)] tabular-nums">
-                      {weekOverrides[course.id] ?? courseWeek(course.startDate, course.flexWeeks)}
+                {unenrollConfirm === course.id && (
+                  <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-amber)]" />
+                    <span className="flex-1 font-sans text-[11px] text-[color:var(--color-fg-mute)]">
+                      This deletes all your progress for this course.
                     </span>
                     <button
-                      onClick={() => adjustWeek(course.id, 1)}
-                      className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
+                      onClick={() => setUnenrollConfirm(null)}
+                      className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase hover:text-[color:var(--color-fg)]"
                     >
-                      <ChevronUp className="h-3 w-3" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => unenroll.mutate({ courseId: course.id })}
+                      disabled={unenroll.isPending}
+                      className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-red)] uppercase hover:opacity-80"
+                    >
+                      Confirm
                     </button>
                   </div>
-                  {weekOverrides[course.id] !== undefined &&
-                    weekOverrides[course.id] !== courseWeek(course.startDate, course.flexWeeks) && (
-                    <span className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-amber)] uppercase">
-                      override
+                )}
+
+                {unenrollConfirm !== course.id && (
+                  <div className="flex items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-void)] px-4 py-2.5">
+                    <span className="font-mono text-[11px] tracking-[0.16em] text-[color:var(--color-fg-mute)] uppercase">
+                      Week
                     </span>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => adjustWeek(course.id, -1)}
+                        className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center font-mono text-[13px] text-[color:var(--color-phosphor)] tabular-nums">
+                        {weekOverrides[course.id] ?? courseWeek(course.startDate, course.flexWeeks)}
+                      </span>
+                      <button
+                        onClick={() => adjustWeek(course.id, 1)}
+                        className="border border-[color:var(--color-rule-hi)] p-1 transition-colors hover:border-[color:var(--color-fg-soft)]"
+                      >
+                        <ChevronUp className="h-3 w-3" />
+                      </button>
+                    </div>
+                    {weekOverrides[course.id] !== undefined &&
+                      weekOverrides[course.id] !== courseWeek(course.startDate, course.flexWeeks) && (
+                      <span className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-amber)] uppercase">
+                        override
+                      </span>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Search to add courses */}
+        <div className="mt-4">
+          <div className="flex items-center gap-2 border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)] px-3 py-2 transition-colors focus-within:border-[color:var(--color-phosphor)]">
+            <Search className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-fg-mute)]" />
+            <input
+              type="text"
+              value={courseSearch}
+              onChange={(e) => setCourseSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") setCourseSearch(""); }}
+              placeholder="Search courses to enroll…"
+              className="flex-1 bg-transparent font-mono text-[13px] text-[color:var(--color-fg)] outline-none placeholder:text-[color:var(--color-fg-mute)]"
+            />
+            {courseSearch && (
+              <button onClick={() => setCourseSearch("")} className="text-[color:var(--color-fg-mute)] hover:text-[color:var(--color-fg)]">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {searchResults.length > 0 && (
+            <ul className="mt-1 divide-y divide-[color:var(--color-rule)] border border-[color:var(--color-rule-hi)]">
+              {searchResults.map((course) => (
+                <li key={course.id} className="flex items-center gap-3 bg-[color:var(--color-panel)] px-4 py-2.5">
+                  <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
+                    {course.name.split(" ")[0]}
+                  </span>
+                  <span className="flex-1 font-sans text-[13px] text-[color:var(--color-fg)]">
+                    {course.name.split(" ").slice(1).join(" ")}
+                  </span>
+                  <button
+                    onClick={() => enroll.mutate({ courseId: course.id })}
+                    disabled={enroll.isPending}
+                    className="font-mono text-[10px] tracking-[0.16em] text-[color:var(--color-phosphor)] uppercase transition-opacity hover:opacity-70"
+                  >
+                    + Enroll
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {courseSearch.trim() && searchResults.length === 0 && (
+            <p className="mt-2 font-mono text-[11px] text-[color:var(--color-fg-mute)]">No courses found</p>
+          )}
+        </div>
       </section>
 
       {/* Notifications */}
