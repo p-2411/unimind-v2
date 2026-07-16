@@ -7,6 +7,7 @@ const initialData = initialDataRaw as {
   subtopics: { id: string; name: string; description: string; topicId: string }[];
   questions: { id: string; question: string; choices: string[]; answerIndex: number; explanation: string; topicId: string; subtopicId: string; difficulty: number }[];
   assessments: { id: string; name: string; description: string; courseId: string; date: string; weekFrom?: number | null; weekTo?: number | null }[];
+  problems?: { id: string; slug: string; title: string; difficulty: string; type: string; description: string; hints: string[]; solution: string; courseId: string; topicId?: string | null }[];
 };
 
 const prisma = new PrismaClient();
@@ -491,14 +492,15 @@ Frame size = 4 × 4 bytes = 16 bytes (aligned to 8 bytes → may be padded).
     },
   ];
 
-  for (const p of PROBLEMS) {
+  const ALL_PROBLEMS = [...PROBLEMS, ...(initialData.problems ?? [])];
+  for (const p of ALL_PROBLEMS) {
     await prisma.problem.upsert({
       where: { id: p.id },
       create: p,
       update: p,
     });
   }
-  console.log(`   ✓ Seeded ${PROBLEMS.length} exam problems`);
+  console.log(`   ✓ Seeded ${ALL_PROBLEMS.length} exam problems`);
 
   console.log("\n✅ Database seeded successfully!");
 }
