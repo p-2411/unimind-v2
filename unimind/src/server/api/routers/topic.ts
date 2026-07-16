@@ -8,7 +8,7 @@ export const topicRouter = createTRPCRouter({
           userCourses: { some: { userId: ctx.session.user.id } },
         },
       },
-      select: { id: true, name: true },
+      select: { id: true, name: true, courseId: true },
       orderBy: { name: "asc" },
     }),
   ),

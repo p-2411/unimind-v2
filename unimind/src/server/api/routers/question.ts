@@ -15,6 +15,7 @@ export const questionRouter = createTRPCRouter({
     .input(
       z
         .object({
+          courseId: z.string().optional(),
           topicId: z.string().optional(),
           difficulty: z.number().int().min(1).max(3).optional(),
           search: z.string().optional(),
@@ -23,7 +24,7 @@ export const questionRouter = createTRPCRouter({
         .optional(),
     )
     .query(({ ctx, input }) => {
-      const { topicId, difficulty, search, limit = 50 } = input ?? {};
+      const { courseId, topicId, difficulty, search, limit = 50 } = input ?? {};
       const trimmed = search?.trim();
       const userId = ctx.session.user.id;
       return ctx.db.question.findMany({
@@ -31,6 +32,7 @@ export const questionRouter = createTRPCRouter({
           topic: {
             course: {
               userCourses: { some: { userId } },
+              ...(courseId ? { id: courseId } : {}),
             },
           },
           ...(topicId ? { topicId } : {}),
@@ -64,7 +66,7 @@ export const questionRouter = createTRPCRouter({
             select: {
               id: true,
               name: true,
-              course: { select: { name: true } },
+              course: { select: { id: true, name: true } },
             },
           },
           subtopic: { select: { id: true, name: true } },
@@ -87,7 +89,7 @@ export const questionRouter = createTRPCRouter({
         explanation: true,
         difficulty: true,
         topic: {
-          select: { id: true, name: true, course: { select: { name: true } } },
+          select: { id: true, name: true, course: { select: { id: true, name: true } } },
         },
         subtopic: { select: { id: true, name: true } },
       },
@@ -112,7 +114,7 @@ export const questionRouter = createTRPCRouter({
         answerIndex: true,
         difficulty: true,
         topic: {
-          select: { id: true, name: true, course: { select: { name: true } } },
+          select: { id: true, name: true, course: { select: { id: true, name: true } } },
         },
         subtopic: { select: { id: true, name: true } },
       },

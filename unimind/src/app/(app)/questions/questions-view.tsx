@@ -21,11 +21,14 @@ export function QuestionsView() {
 
   const [topicFilter, setTopicFilter] = useState<{ id: string; name: string } | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<1 | 2 | 3 | null>(null);
+  const [courseFilter, setCourseFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("Recent");
 
   const topicsQuery = api.topic.getAll.useQuery();
+  const myCoursesQuery = api.course.listMine.useQuery();
   const questionsQuery = api.question.list.useQuery({
+    courseId: courseFilter ?? undefined,
     topicId: topicFilter?.id,
     difficulty: difficultyFilter ?? undefined,
     search: query.trim() || undefined,
@@ -39,13 +42,22 @@ export function QuestionsView() {
   const [shakingId, setShakingId] = useState<string | null>(null);
   const [flashingId, setFlashingId] = useState<string | null>(null);
 
+  const courseChips = useMemo(() => {
+    return (myCoursesQuery.data ?? [])
+      .map((uc) => ({ id: uc.course.id, name: uc.course.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [myCoursesQuery.data]);
+
   const topicChips = useMemo(() => {
     const list = topicsQuery.data ?? [];
-    return list.map((t) => ({ id: t.id, name: t.name }));
-  }, [topicsQuery.data]);
+    return list
+      .filter((t) => !courseFilter || t.courseId === courseFilter)
+      .map((t) => ({ id: t.id, name: t.name }));
+  }, [topicsQuery.data, courseFilter]);
 
   const sorted = useMemo(() => {
-    const list = [...(questionsQuery.data ?? [])];
+    let list = [...(questionsQuery.data ?? [])];
+    if (courseFilter) list = list.filter((q) => q.topic.course.id === courseFilter);
     if (sort === "Difficulty") list.sort((a, b) => a.difficulty - b.difficulty);
     if (sort === "Topic") list.sort((a, b) => a.topic.name.localeCompare(b.topic.name));
     if (seedId) {
@@ -56,7 +68,7 @@ export function QuestionsView() {
       }
     }
     return list;
-  }, [questionsQuery.data, sort, seedId]);
+  }, [questionsQuery.data, sort, seedId, courseFilter]);
 
   useEffect(() => {
     if (!seedId || seedPick === null) return;
@@ -180,6 +192,21 @@ export function QuestionsView() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <FilterGroup label="Course">
+              <Chip active={courseFilter === null} onClick={() => { setCourseFilter(null); setTopicFilter(null); }}>All</Chip>
+              {courseChips.map((c) => (
+                <Chip
+                  key={c.id}
+                  active={courseFilter === c.id}
+                  onClick={() => { setCourseFilter(courseFilter === c.id ? null : c.id); setTopicFilter(null); }}
+                >
+                  {c.name.split(" ")[0]}
+                </Chip>
+              ))}
+            </FilterGroup>
+
+            <div className="hidden h-5 w-px bg-[color:var(--color-rule)] md:block" />
+
             <FilterGroup label="Topic">
               <Chip active={topicFilter === null} onClick={() => setTopicFilter(null)}>All</Chip>
               {topicChips.map((t) => (
