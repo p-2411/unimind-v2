@@ -1,53 +1,38 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { env } from "~/env";
+
+// Middleware runs on Edge runtime — no Prisma/DB calls allowed here.
+// Cookie existence is checked here for redirects; actual session verification
+// happens in the tRPC context on every server request.
+const SESSION_COOKIE = "better-auth.session_token";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
-  const supabase = createServerClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  // IMPORTANT: Do not place any code between createServerClient and getClaims().
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
-
-  const pathname = request.nextUrl.pathname;
   const isAuthPage =
-    pathname === "/login" || pathname === "/signup";
-  const isAuthApi = pathname.startsWith("/auth");
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password";
+  const isPublicPage = pathname === "/privacy";
+  const isAuthApi = pathname.startsWith("/api/auth");
+  const isExtensionApi = pathname.startsWith("/api/extension");
 
-  if (!user && !isAuthPage && !isAuthApi) {
+  if (isAuthApi || isExtensionApi || isPublicPage) return NextResponse.next();
+
+  const hasSession = !!request.cookies.get(SESSION_COOKIE)?.value;
+
+  if (!hasSession && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  if (hasSession && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

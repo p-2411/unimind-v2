@@ -14,3 +14,6 @@ const globalForPrisma = globalThis as unknown as {
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 if (env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+
+// Eagerly open the connection so the first user-facing request doesn't pay the cold-start cost.
+void db.$connect();

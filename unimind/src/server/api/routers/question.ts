@@ -8,12 +8,14 @@ import {
   applyMastery,
   pickNextQuestionId,
 } from "~/server/lib/scoring";
+import { shuffleChoices } from "~/server/lib/shuffle";
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
     .input(
       z
         .object({
+          courseId: z.string().optional(),
           topicId: z.string().optional(),
           difficulty: z.number().int().min(1).max(3).optional(),
           search: z.string().optional(),
@@ -22,7 +24,7 @@ export const questionRouter = createTRPCRouter({
         .optional(),
     )
     .query(({ ctx, input }) => {
-      const { topicId, difficulty, search, limit = 50 } = input ?? {};
+      const { courseId, topicId, difficulty, search, limit = 50 } = input ?? {};
       const trimmed = search?.trim();
       const userId = ctx.session.user.id;
       return ctx.db.question.findMany({
@@ -30,6 +32,7 @@ export const questionRouter = createTRPCRouter({
           topic: {
             course: {
               userCourses: { some: { userId } },
+              ...(courseId ? { id: courseId } : {}),
             },
           },
           ...(topicId ? { topicId } : {}),
@@ -38,8 +41,14 @@ export const questionRouter = createTRPCRouter({
             ? {
                 OR: [
                   { question: { contains: trimmed, mode: "insensitive" } },
-                  { topic: { name: { contains: trimmed, mode: "insensitive" } } },
-                  { subtopic: { name: { contains: trimmed, mode: "insensitive" } } },
+                  {
+                    topic: { name: { contains: trimmed, mode: "insensitive" } },
+                  },
+                  {
+                    subtopic: {
+                      name: { contains: trimmed, mode: "insensitive" },
+                    },
+                  },
                 ],
               }
             : {}),
@@ -53,7 +62,13 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           difficulty: true,
-          topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+          topic: {
+            select: {
+              id: true,
+              name: true,
+              course: { select: { id: true, name: true } },
+            },
+          },
           subtopic: { select: { id: true, name: true } },
         },
       });
@@ -64,7 +79,7 @@ export const questionRouter = createTRPCRouter({
     const questionId = await pickNextQuestionId(ctx.db, userId);
     if (!questionId) return null;
 
-    return ctx.db.question.findUnique({
+    const q = await ctx.db.question.findUnique({
       where: { id: questionId },
       select: {
         id: true,
@@ -73,10 +88,15 @@ export const questionRouter = createTRPCRouter({
         answerIndex: true,
         explanation: true,
         difficulty: true,
-        topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+        topic: {
+          select: { id: true, name: true, course: { select: { id: true, name: true } } },
+        },
         subtopic: { select: { id: true, name: true } },
       },
     });
+    if (!q) return null;
+    const { choices, answerIndex } = shuffleChoices(q.id, q.choices, q.answerIndex);
+    return { ...q, choices, answerIndex };
   }),
 
   nextForPaywall: protectedProcedure.query(async ({ ctx }) => {
@@ -85,17 +105,24 @@ export const questionRouter = createTRPCRouter({
     if (!questionId) return null;
 
     // Paywall response shape: NO answerIndex, NO explanation pre-answer.
-    return ctx.db.question.findUnique({
+    const q = await ctx.db.question.findUnique({
       where: { id: questionId },
       select: {
         id: true,
         question: true,
         choices: true,
+        answerIndex: true,
         difficulty: true,
-        topic: { select: { id: true, name: true, course: { select: { name: true } } } },
+        topic: {
+          select: { id: true, name: true, course: { select: { id: true, name: true } } },
+        },
         subtopic: { select: { id: true, name: true } },
       },
     });
+    if (!q) return null;
+    const { choices } = shuffleChoices(q.id, q.choices, q.answerIndex);
+    const { answerIndex: _removed, ...rest } = { ...q, choices };
+    return rest;
   }),
 
   answer: protectedProcedure
@@ -121,16 +148,27 @@ export const questionRouter = createTRPCRouter({
         select: {
           id: true,
           topicId: true,
+          subtopicId: true,
+          choices: true,
           answerIndex: true,
           explanation: true,
           topic: { select: { name: true } },
+          difficulty: true,
         },
       });
       if (!question) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Question not found",
+        });
       }
 
-      const isCorrect = input.choiceIndex === question.answerIndex;
+      const { answerIndex: shuffledAnswerIndex } = shuffleChoices(
+        question.id,
+        question.choices,
+        question.answerIndex,
+      );
+      const isCorrect = input.choiceIndex === shuffledAnswerIndex;
       const now = new Date();
       const today = new Date(now);
       today.setUTCHours(0, 0, 0, 0);
@@ -199,6 +237,7 @@ export const questionRouter = createTRPCRouter({
             userId,
             questionId: question.id,
             topicId: question.topicId,
+            subtopicId: question.subtopicId,
             isCorrect,
             rating: input.rating,
             timeSpentMs: input.timeSpentMs,
@@ -210,17 +249,44 @@ export const questionRouter = createTRPCRouter({
         // 5. Update UserTopic mastery (EMA).
         const existingUt = await tx.userTopic.findUnique({
           where: { userId_topicId: { userId, topicId: question.topicId } },
-          select: { masteryScore: true, masteryUpdatedAt: true, correctCount: true, totalCount: true },
+          select: {
+            masteryScore: true,
+            masteryUpdatedAt: true,
+            correctCount: true,
+            totalCount: true,
+          },
         });
+
+        const existingUs = await tx.userStats.findUnique({
+          where: { userId },
+          select: {
+            lastActiveDate: true,
+            currentStreak: true,
+            longestStreak: true,
+            xp: true,
+            level: true,
+          },
+        });
+
+        const lastActiveDate = existingUs?.lastActiveDate;
+        const currentStreak = existingUs?.currentStreak ?? 0;
+        const longestStreak = existingUs?.longestStreak ?? 0;
         const prevScore = existingUt?.masteryScore ?? 50;
+        let newStreak = currentStreak;
+        let newLongestStreak = longestStreak;
+        let xp = existingUs?.xp ?? 0;
+        let level = existingUs?.level ?? 0;
+        const prevLevel = level;
         const prevUpdatedAt = existingUt?.masteryUpdatedAt ?? now;
         const { masteryScore, masteryUpdatedAt } = applyMastery({
           prevScore,
           prevUpdatedAt,
           isCorrect,
           now,
+          difficulty: question.difficulty,
         });
-        const correctCount = (existingUt?.correctCount ?? 0) + (isCorrect ? 1 : 0);
+        const correctCount =
+          (existingUt?.correctCount ?? 0) + (isCorrect ? 1 : 0);
         const totalCount = (existingUt?.totalCount ?? 0) + 1;
 
         const userTopic = await tx.userTopic.upsert({
@@ -244,6 +310,46 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
+        if (!lastActiveDate) {
+          newStreak = 1;
+        } else if (today.getTime() - lastActiveDate.getTime() === 86400000) {
+          newStreak += 1;
+        } else if (today.getTime() - lastActiveDate.getTime() > 86400000) {
+          newStreak = 1;
+        }
+
+        if (newStreak > longestStreak) {
+          newLongestStreak = newStreak;
+        }
+
+        if (isCorrect) {
+          if (question.difficulty === 1) {
+            xp += 16;
+          } else if (question.difficulty === 2) {
+            xp += 24;
+          } else if (question.difficulty === 3) {
+            xp += 40;
+          }
+        } else if (!isCorrect) {
+          if (question.difficulty === 1) {
+            xp += 1;
+          } else if (question.difficulty === 2) {
+            xp += 2;
+          } else if (question.difficulty === 3) {
+            xp += 4;
+          }
+        }
+
+        if (newStreak % 10 === 0 && newStreak !== 0) {
+          xp += 100;
+        }
+
+        if (prevScore < 95 && masteryScore >= 95) {
+          xp += 250;
+        }
+
+        level = Math.floor(Math.sqrt(xp / 50));
+
         // 6. Update UserStats (unchanged from current logic).
         await tx.userStats.upsert({
           where: { userId },
@@ -253,16 +359,24 @@ export const questionRouter = createTRPCRouter({
             totalCorrectAnswers: isCorrect ? 1 : 0,
             totalTimeSpent: input.timeSpentMs,
             lastActiveDate: today,
+            currentStreak: 1,
+            longestStreak: 1,
+            xp: 0,
+            level: 0,
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
             totalCorrectAnswers: { increment: isCorrect ? 1 : 0 },
             totalTimeSpent: { increment: input.timeSpentMs },
             lastActiveDate: today,
+            currentStreak: newStreak,
+            longestStreak: newLongestStreak,
+            xp: xp,
+            level: level,
           },
         });
 
-        return { userTopic, nextDue: card.due };
+        return { userTopic, nextDue: card.due, prevLevel, newLevel: level, newXp: xp };
       });
 
       return {
@@ -271,6 +385,9 @@ export const questionRouter = createTRPCRouter({
         explanation: question.explanation,
         userTopic: result.userTopic,
         nextDue: result.nextDue,
+        leveledUp: result.newLevel > result.prevLevel,
+        newLevel: result.newLevel,
+        xp: result.newXp,
       };
     }),
 });

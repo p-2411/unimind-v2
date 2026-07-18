@@ -1,4 +1,4 @@
-import { UnimindLogo } from "~/components/logo";
+import { MastifyWordmark } from "~/components/logo";
 import { SocialProofTicker } from "~/components/social-proof-ticker";
 import {
   HARDCODED_USER_COUNT,
@@ -33,15 +33,10 @@ export default function AuthLayout({
           />
 
           <div className="relative flex h-full flex-col justify-between p-10">
-            <div className="term-rise flex items-center gap-3">
-              <UnimindLogo className="h-9 w-9 text-[color:var(--color-phosphor)]" />
-              <div className="leading-tight">
-                <div className="font-mono text-[20px] font-semibold tracking-tight">
-                  Unimind
-                </div>
-                <div className="font-mono text-[10.5px] text-[color:var(--color-fg-mute)]">
-                  CS practice console
-                </div>
+            <div className="term-rise">
+              <MastifyWordmark className="h-9 w-auto text-[color:var(--color-phosphor)]" />
+              <div className="mt-1 font-mono text-[10.5px] text-[color:var(--color-fg-mute)]">
+                CS practice console
               </div>
             </div>
 

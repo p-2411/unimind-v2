@@ -3,7 +3,6 @@ import {
   readMastery,
   HALF_LIFE_DAYS,
   NEUTRAL_SCORE,
-  ATTEMPT_WEIGHT,
 } from "./mastery";
 
 const day = (n: number) => new Date(Date.UTC(2026, 0, 1 + n));
@@ -15,6 +14,7 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(0),
       isCorrect: true,
       now: day(0),
+      difficulty: 2,
     });
     // No elapsed time → decayed === prev (50). next = 0.15*100 + 0.85*50 = 57.5.
     expect(masteryScore).toBeCloseTo(57.5, 5);
@@ -27,6 +27,7 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(0),
       isCorrect: false,
       now: day(0),
+      difficulty: 2,
     });
     // next = 0.15*0 + 0.85*50 = 42.5.
     expect(masteryScore).toBeCloseTo(42.5, 5);
@@ -39,20 +40,22 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(0),
       isCorrect: true,
       now: day(HALF_LIFE_DAYS),
+      difficulty: 2,
     });
     // decayed = 0.5*80 + 0.5*50 = 65. next = 0.15*100 + 0.85*65 = 70.25.
     expect(masteryScore).toBeCloseTo(70.25, 5);
   });
 
-  it("blends a NEUTRAL score upward by ATTEMPT_WEIGHT on a correct answer", () => {
+  it("blends a NEUTRAL score upward on a correct answer", () => {
     const { masteryScore } = applyMastery({
       prevScore: NEUTRAL_SCORE,
       prevUpdatedAt: day(0),
       isCorrect: true,
       now: day(0),
+      difficulty: 2,
     });
-    // 0.15*100 + 0.85*50 = 57.5 (still close to neutral, ratio matches ATTEMPT_WEIGHT).
-    const expected = ATTEMPT_WEIGHT * 100 + (1 - ATTEMPT_WEIGHT) * NEUTRAL_SCORE;
+    // 0.15*100 + 0.85*50 = 57.5
+    const expected = 0.15 * 100 + (1 - 0.15) * NEUTRAL_SCORE;
     expect(masteryScore).toBeCloseTo(expected, 5);
   });
 
@@ -63,6 +66,7 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(10),
       isCorrect: true,
       now: day(0),
+      difficulty: 2,
     });
     // Negative elapsed clamped to 0: decayed = 90, next = 0.15*100 + 0.85*90 = 91.5.
     expect(masteryScore).toBeCloseTo(91.5, 5);
@@ -75,6 +79,7 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(0),
       isCorrect: true,
       now: day(0),
+      difficulty: 2,
     });
     expect(high.masteryScore).toBeLessThanOrEqual(100);
 
@@ -84,6 +89,7 @@ describe("applyMastery", () => {
       prevUpdatedAt: day(0),
       isCorrect: false,
       now: day(0),
+      difficulty: 2,
     });
     expect(low.masteryScore).toBeGreaterThanOrEqual(0);
   });

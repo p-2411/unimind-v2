@@ -15,6 +15,8 @@ export const courseRouter = createTRPCRouter({
         description: true,
         color: true,
         icon: true,
+        startDate: true,
+        flexWeeks: true,
       },
     }),
   ),
@@ -66,4 +68,18 @@ export const courseRouter = createTRPCRouter({
       orderBy: { enrolledAt: "desc" },
     }),
   ),
+
+  setWeekOverride: protectedProcedure
+    .input(z.object({ courseId: z.string(), week: z.number().int().min(1).nullable() }))
+    .mutation(({ ctx, input }) =>
+      ctx.db.userCourse.update({
+        where: {
+          userId_courseId: {
+            userId: ctx.session.user.id,
+            courseId: input.courseId,
+          },
+        },
+        data: { currentWeekOverride: input.week },
+      }),
+    ),
 });

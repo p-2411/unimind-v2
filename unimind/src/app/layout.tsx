@@ -4,10 +4,10 @@ import { type Metadata } from "next";
 import { JetBrains_Mono, Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
-import { SupabaseProvider } from "~/components/providers/supabase-provider";
+import { ErrorReporter } from "~/components/providers/error-reporter";
 
 export const metadata: Metadata = {
-  title: "Unimind — CS Practice Console",
+  title: "Mastify — CS Practice Console",
   description: "A practice console for computer science students.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
@@ -29,9 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${jetbrains.variable} dark`}>
       <body className="font-mono antialiased">
-        <SupabaseProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </SupabaseProvider>
+        <TRPCReactProvider>
+          <ErrorReporter />
+          {children}
+        </TRPCReactProvider>
       </body>
     </html>
   );

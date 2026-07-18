@@ -1,69 +1,53 @@
-type Props = { className?: string };
-
-export function UnimindLogo({ className }: Props) {
+function RaccoonIcon() {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="Unimind"
-      stroke="currentColor"
-      strokeWidth="1"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* Central chip — octagon */}
-      <path d="M14.5 13 H17.5 L19 14.5 V17.5 L17.5 19 H14.5 L13 17.5 V14.5 Z" strokeWidth="1.1" />
-      {/* Chip core detail */}
-      <rect x="15.25" y="15.25" width="1.5" height="1.5" strokeWidth="0.8" />
+    <>
+      {/* Graduation cap */}
+      <rect x="11" y="12" width="78" height="14" rx="2" fill="currentColor" />
+      <rect x="35" y="26" width="30" height="11" rx="2" fill="currentColor" opacity="0.82" />
+      <line x1="88" y1="19" x2="94" y2="33" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="94" cy="36" r="3" fill="currentColor" />
 
-      {/* Circuit traces — each exits chip, bends at right angles, ends at a hollow node on the brain perimeter */}
-      {/* Frontal lobes (top) — two peaks with a dip between them */}
-      <path d="M15 13 V9 H13 V3.5" />
-      <path d="M17 13 V9 H19 V3.5" />
+      {/* Ears */}
+      <circle cx="26" cy="43" r="10" stroke="currentColor" strokeWidth="4" />
+      <circle cx="74" cy="43" r="10" stroke="currentColor" strokeWidth="4" />
 
-      {/* Frontal shoulders */}
-      <path d="M13 14.5 H10 V7 H8 V5.5" />
-      <path d="M19 14.5 H22 V7 H24 V5.5" />
+      {/* Head — slim ellipse */}
+      <ellipse cx="50" cy="69" rx="23" ry="28" stroke="currentColor" strokeWidth="4" />
 
-      {/* Temporal bulge — widest points */}
-      <path d="M13 16 H8 V11 H4.5" />
-      <path d="M19 16 H24 V11 H27.5" />
+      {/* Eye mask */}
+      <ellipse cx="37" cy="66" rx="9.5" ry="7" fill="currentColor" opacity="0.18" />
+      <ellipse cx="63" cy="66" rx="9.5" ry="7" fill="currentColor" opacity="0.18" />
 
-      {/* Lower temporal / parietal */}
-      <path d="M13 17.5 H9 V18 H5.5" />
-      <path d="M19 17.5 H23 V18 H26.5" />
+      {/* Eyes */}
+      <circle cx="37" cy="66" r="4" fill="currentColor" />
+      <circle cx="63" cy="66" r="4" fill="currentColor" />
 
-      {/* Cerebellum curve — tapering inward */}
-      <path d="M14.5 19 V22 H10.5 V23.5" />
-      <path d="M17.5 19 V22 H21.5 V23.5" />
+      {/* Nose */}
+      <circle cx="50" cy="77" r="2.5" fill="currentColor" opacity="0.58" />
+    </>
+  );
+}
 
-      {/* Brainstem — narrow bottom */}
-      <path d="M15.5 19 V25 H14 V27.5" />
-      <path d="M16.5 19 V25 H18 V27.5" />
+export function MastifyLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" aria-label="Mastify" className={className}>
+      <RaccoonIcon />
+    </svg>
+  );
+}
 
-      {/* Terminal nodes — hollow circles at brain silhouette points */}
-      <g>
-        {/* Frontal lobe peaks (highest, with dip at center x=16) */}
-        <circle cx="13" cy="3.5" r="1.3" />
-        <circle cx="19" cy="3.5" r="1.3" />
-        {/* Frontal shoulders */}
-        <circle cx="8" cy="5.5" r="1.3" />
-        <circle cx="24" cy="5.5" r="1.3" />
-        {/* Temporal bulge — widest */}
-        <circle cx="4.5" cy="11" r="1.3" />
-        <circle cx="27.5" cy="11" r="1.3" />
-        {/* Lower sides */}
-        <circle cx="5.5" cy="18" r="1.3" />
-        <circle cx="26.5" cy="18" r="1.3" />
-        {/* Cerebellum */}
-        <circle cx="10.5" cy="23.5" r="1.3" />
-        <circle cx="21.5" cy="23.5" r="1.3" />
-        {/* Brainstem base — narrow */}
-        <circle cx="14" cy="27.5" r="1.3" />
-        <circle cx="18" cy="27.5" r="1.3" />
-      </g>
+export function MastifyWordmark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 310 100" fill="none" aria-label="Mastify" className={className}>
+      <RaccoonIcon />
+      <text
+        x="108" y="72"
+        fontFamily="'Menlo','Monaco','Courier New',monospace"
+        fontSize="44"
+        fontWeight="700"
+        letterSpacing="1"
+        fill="currentColor"
+      >MASTIFY</text>
     </svg>
   );
 }

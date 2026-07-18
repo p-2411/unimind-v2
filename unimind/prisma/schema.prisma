@@ -17,21 +17,77 @@ datasource db {
 // ============================================
 
 model User {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  name      String?
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @db.Uuid
+  email                String   @unique
+  name                 String?
+  emailVerified        Boolean  @default(false)
+  image                String?
+  disabledDefaults     String[] @default([])
+  customBlocked        String[] @default([])
+  dailyReminderEnabled Boolean  @default(false)
+  dailyReminderTime    String   @default("09:00")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
+  sessions    Session[]
+  accounts    Account[]
   userCourses UserCourse[]      @relation("UserCourseEnrollments")
   assessments Assessment[]
   stats       UserStats?
   topics      UserTopic[]
   questions   UserQuestion[]
   attempts    QuestionAttempt[]
+  feedback    Feedback[]
+
+  groupMemberships GroupMembership[]
+  groupMessages    GroupMessage[]
+  problemAttempts  ProblemAttempt[]
 
   @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verifications")
 }
 
 model UserStats {
@@ -80,6 +136,7 @@ model UserStats {
 //   userId     String
 //   courseId   String
 //   enrolledAt DateTime @default(now())
+//   currentWeekOverride Int?
 
 //   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 //   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -127,10 +184,11 @@ model UserTopic {
 }
 
 model UserCourse {
-  id         String   @id @default(cuid())
-  userId     String   @db.Uuid
-  courseId   String
-  enrolledAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  userId              String   @db.Uuid
+  courseId            String
+  enrolledAt          DateTime @default(now())
+  currentWeekOverride Int?
 
   user   User   @relation("UserCourseEnrollments", fields: [userId], references: [id], onDelete: Cascade)
   course Course @relation("UserCourseEnrollments", fields: [courseId], references: [id], onDelete: Cascade)
@@ -171,19 +229,88 @@ model QuestionAttempt {
   userId      String   @db.Uuid
   questionId  String
   topicId     String // denormalized for cheap topic-scoped queries
+  subtopicId  String? // denormalized for cheap subtopic-scoped queries
   isCorrect   Boolean
   rating      Int // 1=Again, 2=Hard, 3=Good, 4=Easy
   timeSpentMs Int      @default(0)
   source      String // "paywall" | "in_app" — analytics only
   answeredAt  DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  topic    Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topic    Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  subtopic Subtopic? @relation(fields: [subtopicId], references: [id], onDelete: SetNull)
 
   @@index([userId, answeredAt])
   @@index([userId, topicId, answeredAt])
+  @@index([userId, subtopicId, answeredAt])
   @@map("question_attempts")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("admins")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?  @db.Uuid
+  type      String   // "bug" | "suggestion" | "general"
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+// ============================================
+// STUDY GROUPS
+// ============================================
+
+model StudyGroup {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+
+  members  GroupMembership[]
+  messages GroupMessage[]
+
+  @@map("study_groups")
+}
+
+model GroupMembership {
+  id       String   @id @default(cuid())
+  userId   String   @db.Uuid
+  groupId  String
+  role     String   @default("member") // "owner" | "member"
+  joinedAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+  @@map("group_memberships")
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String   @db.Uuid
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
 }
 
 // ============================================
@@ -202,6 +329,9 @@ model Course {
   topics      Topic[]
   userCourses UserCourse[] @relation("UserCourseEnrollments")
   assessments Assessment[]
+  problems    Problem[]
+  startDate   DateTime?
+  flexWeeks   Int[]        @default([]) // Calendar week numbers with no new content (e.g. [6] for UNSW T2)
 
   @@map("courses")
 }
@@ -211,6 +341,7 @@ model Topic {
   name        String
   description String?
   courseId    String
+  weekNumber  Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -219,6 +350,7 @@ model Topic {
   questions  Question[]
   userTopics UserTopic[]
   attempts   QuestionAttempt[]
+  problems   Problem[]
 
   @@index([courseId])
   @@map("topics")
@@ -232,8 +364,9 @@ model Subtopic {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  topic     Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic     Topic             @relation(fields: [topicId], references: [id], onDelete: Cascade)
   questions Question[]
+  attempts  QuestionAttempt[]
 
   @@index([topicId])
   @@map("subtopics")
@@ -277,6 +410,8 @@ model Assessment {
   courseId    String
   date        DateTime
   description String?  @db.Text
+  weekFrom    Int?
+  weekTo      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -286,4 +421,47 @@ model Assessment {
   @@index([courseId])
   @@index([date])
   @@map("assessments")
+}
+
+// ============================================
+// PROBLEMS (exam-style, LeetCode-style)
+// ============================================
+
+model Problem {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  difficulty  String   @default("medium") // "easy" | "medium" | "hard"
+  type        String   @default("code-writing") // "code-writing" | "code-tracing" | "short-answer" | "diagram"
+  description String   @db.Text  // markdown
+  hints       String[] // revealed progressively
+  solution    String   @db.Text  // markdown
+  courseId    String
+  topicId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  topic    Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  attempts ProblemAttempt[]
+
+  @@index([courseId])
+  @@index([topicId])
+  @@map("problems")
+}
+
+model ProblemAttempt {
+  id          String    @id @default(cuid())
+  userId      String    @db.Uuid
+  problemId   String
+  selfRated   Boolean?  // null = attempted but not self-rated; true = got it; false = needs review
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, problemId])
+  @@index([userId])
+  @@map("problem_attempts")
 }
