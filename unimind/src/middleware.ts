@@ -34,8 +34,12 @@ export async function middleware(request: NextRequest) {
   const isAuthPage =
     pathname === "/login" || pathname === "/signup";
   const isAuthApi = pathname.startsWith("/auth");
+  // API routes are never redirected to the HTML login page: tRPC decides
+  // per-procedure (protected ones throw UNAUTHORIZED, public ones still work).
+  // Cookie refresh above still applies to these requests.
+  const isApi = pathname.startsWith("/api");
 
-  if (!user && !isAuthPage && !isAuthApi) {
+  if (!user && !isAuthPage && !isAuthApi && !isApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
