@@ -14,11 +14,12 @@ import {
   updateStreak,
   evaluateAchievement,
   ALL_ACHIEVEMENT_CODES,
-  type AchievementContext,
+  loadAchievementContext,
   logAnalyticsEvents,
   ANALYTICS_EVENTS,
   type AnalyticsEventInput,
 } from "~/server/lib/gamification";
+import { lockUser } from "~/server/lib/user-lock";
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
@@ -135,26 +136,11 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           difficulty: true,
-          topic: {
-            select: {
-              name: true,
-              course: {
-                select: {
-                  userCourses: { where: { userId }, select: { userId: true } },
-                },
-              },
-            },
-          },
+          topic: { select: { name: true, courseId: true } },
         },
       });
       if (!question) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
-      }
-      if (question.topic.course.userCourses.length === 0) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Question is not in one of your enrolled courses",
-        });
       }
 
       const isCorrect = input.choiceIndex === question.answerIndex;
@@ -178,9 +164,24 @@ export const questionRouter = createTRPCRouter({
       const result = await ctx.db.$transaction(async (tx) => {
         // Serialise this user's answer transactions: XP/level/streak and
         // achievement unlocks are read-then-write, so concurrent answers would
-        // clobber each other or double-insert achievements (P2002). The lock
-        // is transaction-scoped and released automatically on commit/rollback.
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+        // clobber each other or double-insert achievements (P2002).
+        await lockUser(tx, userId);
+
+        // Enrollment check runs under the lock so a concurrent unenroll (which
+        // takes the same lock) cannot slip between the check and the writes
+        // below. Throwing here rolls the transaction back.
+        const enrolled = await tx.userCourse.findUnique({
+          where: {
+            userId_courseId: { userId, courseId: question.topic.courseId },
+          },
+          select: { userId: true },
+        });
+        if (!enrolled) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Question is not in one of your enrolled courses",
+          });
+        }
 
         // 1. Load existing UserQuestion (or null = unseen).
         const existingUq = await tx.userQuestion.findUnique({
@@ -308,7 +309,6 @@ export const questionRouter = createTRPCRouter({
         });
         const newXp = (existingStats?.xp ?? 0) + xpDelta;
         const newLevel = levelForXp(newXp);
-        const leveledUp = newLevel > (existingStats?.level ?? 1);
 
         const streak = updateStreak({
           currentStreak: existingStats?.currentStreak ?? 0,
@@ -317,7 +317,7 @@ export const questionRouter = createTRPCRouter({
           today,
         });
 
-        await tx.userStats.upsert({
+        const savedStats = await tx.userStats.upsert({
           where: { userId },
           create: {
             userId,
@@ -342,26 +342,26 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        // 7. Achievement evaluation. Build a post-answer context snapshot,
-        // evaluate every registered predicate, and insert UserAchievement rows
-        // for previously-unearned codes. Earned XP rewards are summed and
-        // applied in a single stats patch below.
-        const [
-          topicAggregates,
-          distinctTopicsCount,
-          distinctCoursesCount,
-          totalAnswersAgg,
-          alreadyEarned,
-        ] = await Promise.all([
-          tx.userTopic.findMany({
-            where: { userId },
-            select: { masteryScore: true },
-          }),
-          tx.userTopic.count({ where: { userId } }),
-          tx.userCourse.count({ where: { userId } }),
-          tx.userStats.findUnique({
-            where: { userId },
-            select: { totalCorrectAnswers: true, totalQuestionsAnswered: true },
+        // 7. Achievement evaluation. Load the shared post-answer context
+        // snapshot (with the just-written stats), evaluate every registered
+        // predicate, and insert UserAchievement rows for previously-unearned
+        // codes. Earned XP rewards are summed and applied in a single stats
+        // patch below.
+        const [baseCtx, alreadyEarned] = await Promise.all([
+          loadAchievementContext(tx, userId, {
+            now,
+            stats: {
+              level: newLevel,
+              currentStreak: streak.currentStreak,
+              longestStreak: streak.longestStreak,
+              lastActiveDate: streak.lastActiveDate,
+              totalCorrectAnswers: savedStats.totalCorrectAnswers,
+              totalQuestionsAnswered: savedStats.totalQuestionsAnswered,
+            },
+            transient: {
+              justAnsweredDifficulty: question.difficulty,
+              justAnsweredCorrectly: isCorrect,
+            },
           }),
           tx.userAchievement.findMany({
             where: { userId },
@@ -369,45 +369,41 @@ export const questionRouter = createTRPCRouter({
           }),
         ]);
 
-        const ctxForAchievements: AchievementContext = {
-          currentStreak: streak.currentStreak,
-          longestStreak: streak.longestStreak,
-          totalCorrectAnswers: totalAnswersAgg?.totalCorrectAnswers ?? 0,
-          totalQuestionsAnswered: totalAnswersAgg?.totalQuestionsAnswered ?? 0,
-          level: newLevel,
-          topicsWithMastery70: topicAggregates.filter((t) => t.masteryScore >= 70).length,
-          topicsWithMastery85: topicAggregates.filter((t) => t.masteryScore >= 85).length,
-          distinctTopicsPracticed: distinctTopicsCount,
-          distinctCoursesPracticed: distinctCoursesCount,
-          justAnsweredDifficulty: question.difficulty,
-          justAnsweredCorrectly: isCorrect,
-          hasAnsweredAnyQuestion: (totalAnswersAgg?.totalQuestionsAnswered ?? 0) > 0,
-        };
-
         const earnedCodes = new Set(alreadyEarned.map((r) => r.achievement.code));
         const newlyEarned: Array<{ code: string; name: string; xpReward: number }> = [];
         let bonusXp = 0;
-
-        for (const code of ALL_ACHIEVEMENT_CODES) {
-          if (earnedCodes.has(code)) continue;
-          if (!evaluateAchievement(code, ctxForAchievements)) continue;
-          const row = catalogByCode.get(code);
-          if (!row) continue;
-          await tx.userAchievement.create({
-            data: { userId, achievementId: row.id },
-          });
-          newlyEarned.push({ code, name: row.name, xpReward: row.xpReward });
-          bonusXp += row.xpReward;
-        }
-        const newlyEarnedCodes = newlyEarned.map((a) => a.code);
-
         let finalXp = newXp;
         let finalLevel = newLevel;
-        let finalLeveledUp = leveledUp;
-        if (bonusXp > 0) {
+
+        // Fixpoint: bonus XP from an unlock can cross a level boundary, which
+        // can itself satisfy a level-based achievement (META_LEVEL_5). Re-run
+        // with the patched level until a pass earns nothing. Every non-final
+        // pass inserts at least one new code, so this is bounded by the
+        // catalog size.
+        let earnedThisPass: number;
+        do {
+          earnedThisPass = 0;
+          const ctxForAchievements = { ...baseCtx, level: finalLevel };
+          for (const code of ALL_ACHIEVEMENT_CODES) {
+            if (earnedCodes.has(code)) continue;
+            if (!evaluateAchievement(code, ctxForAchievements)) continue;
+            const row = catalogByCode.get(code);
+            if (!row) continue;
+            await tx.userAchievement.create({
+              data: { userId, achievementId: row.id },
+            });
+            earnedCodes.add(code);
+            newlyEarned.push({ code, name: row.name, xpReward: row.xpReward });
+            bonusXp += row.xpReward;
+            earnedThisPass += 1;
+          }
           finalXp = newXp + bonusXp;
           finalLevel = levelForXp(finalXp);
-          finalLeveledUp = finalLevel > (existingStats?.level ?? 1);
+        } while (earnedThisPass > 0);
+        const newlyEarnedCodes = newlyEarned.map((a) => a.code);
+
+        const finalLeveledUp = finalLevel > (existingStats?.level ?? 1);
+        if (bonusXp > 0) {
           await tx.userStats.update({
             where: { userId },
             data: { xp: finalXp, level: finalLevel },
