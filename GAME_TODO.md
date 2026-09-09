@@ -6,15 +6,16 @@ All endpoints below already exist or will exist in Phase 1 — the extension can
 
 ## Streak status strip (top of paywall, above the question)
 
-Three display states, driven by `api.user.dashboardStats` (`currentStreak`, `longestStreak`, `lastActiveDate`) + today's correct-answer count:
+Three display states, driven by `api.user.dashboardStats` (`currentStreak`, `longestStreak`, `lastActiveDate`) + whether the user has answered anything today:
 
-- `✓ Streak N` — today's streak is already preserved by a correct answer.
-- `⏱ Streak N · dies in 3h 42m` — today's correct-answer count is 0. Live countdown to UTC day rollover.
+- `✓ Streak N` — today's streak is already preserved by an answer.
+- `⏱ Streak N · dies in 3h 42m` — no answer yet today. Live countdown to UTC day rollover.
 - `★ Longest: N · Streak 1` — after a break; show the "longest-ever" badge.
 
 Notes:
+- The shipped streak rule counts **any** answer (correct or not) as a streak day — see `src/server/lib/gamification/streak.ts`. The original spec said correct-only; the implementation deliberately relaxed it.
 - Countdown is a pure client-side timer from `now` to next UTC midnight; no server ticking.
-- "Today's correct-answer count" is derivable from `UserStats.lastActiveDate` (equals today's UTC date ⇒ already preserved). No extra endpoint needed.
+- "Answered today" is derivable from `UserStats.lastActiveDate` (equals today's UTC date ⇒ already preserved). No extra endpoint needed.
 
 ## Percentile line
 
@@ -25,12 +26,12 @@ Small, one-liner, cyan accent. Hide entirely if endpoint returns `null`.
 
 ## Post-answer flourish
 
-After the extension calls `question.answer`, the response already includes `xpDelta`, `newLevel`, `leveledUp`, `newlyEarnedCodes`.
+After the extension calls `question.answer`, the response already includes `xpDelta`, `newLevel`, `leveledUp`, `newlyEarnedCodes`, and `newlyEarned` (`[{ code, name, xpReward }]`).
 
 - Correct + non-level-up: `+10 XP` toast (amount reflects difficulty). Phosphor colour. ~2s fade.
 - Correct + level-up: `+10 XP · Level 5 ↑` with a distinct amber animation. ~3s.
 - Incorrect: `+1 XP` in muted colour. No celebration.
-- Achievement earn: one-time `🏅 Achievement: Week One · +50 XP` pop. Looks up the name via `api.achievement.listForUser` (or fetch-once-cache) because the answer mutation only returns codes.
+- Achievement earn: one-time `🏅 Achievement: Week One · +50 XP` pop, rendered straight from `newlyEarned` — no extra lookup needed.
 
 ## Endpoints the paywall will call
 

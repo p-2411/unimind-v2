@@ -38,21 +38,31 @@ Next.js 15 App Router · TypeScript · tRPC v11 · Prisma · Supabase (Auth + Po
 ### Signup / onboarding flow
 1. `/signup` collects `fullName` + `email` + `password`, passes `full_name` via `options.data`.
 2. Redirects to `/onboarding/courses` (card grid, must pick ≥1). `user.enrollCourses` mutation inserts `UserCourse` rows.
-3. Root `/` gates on enrollment count: 0 → redirect to onboarding; >0 → render dashboard. `/onboarding/courses` has the reverse gate.
+3. The `(app)` route-group layout gates on enrollment count: 0 → redirect to onboarding; >0 → render the page. `/onboarding/courses` has the reverse gate.
+
+### Route groups
+- `src/app/(auth)/` — `/login`, `/signup`, `/onboarding/courses`. Shares the decorative auth layout.
+- `src/app/(app)/` — `/` (dashboard, `dashboard-view.tsx`), `/questions`, `/achievements`. `(app)/layout.tsx` checks the Supabase user, enforces the enrollment gate, and wraps children in `SidebarProvider` / `AppSidebar` / `SidebarInset`. Pages must not add their own sidebar wrapper. Shared dashboard client components live in `(app)/_components/`.
+- Middleware never redirects `/api/*` to `/login`; tRPC decides per procedure (protected procedures throw `UNAUTHORIZED`).
 
 ### Data model (`unimind/prisma/schema.prisma`)
 Hierarchy: `Course` → `Topic` → `Subtopic` → `Question`. Per-user state: `UserCourse` (enrollments — hard-deleted on unenroll), `UserTopic` (per-topic EMA mastery + counts), `UserQuestion` (per-`(user, question)` FSRS scheduler state, mirrors ts-fsrs `Card`), `QuestionAttempt` (append-only audit log of every answer), `UserStats` (gamification: level, xp, streaks, totals). `Assessment` is a named dated event tied to a course.
 
+Gamification tables: `Achievement` (catalog, seeded from `prisma/achievements-seed.ts`; `code` is the stable key), `UserAchievement` (first-earn rows, unique per `(user, achievement)`), `AnalyticsEvent` (best-effort wide event log; placeholder until a real pipeline exists).
+
 `User.id` is a UUID matching `auth.users.id` — **no default**; it must be provided on create (done by `getOrCreateUserProfile` in the tRPC context). Most other IDs are cuid.
 
 ### tRPC routers (`src/server/api/routers/`)
-- `user` — `count` (public), `dashboardStats`, `enrollCourses`
+- `user` — `count` (public), `dashboardStats` (mastery tiles + streak/level/XP + achievements rail data), `enrollCourses`, `weeklyPercentile` (anonymous 7-day standing; `null` below cohort 20 or below median)
 - `course` — `list`, `enroll`, `unenroll` (hard reset of all per-user state for the course), `listMine`
-- `question` — `list` (filter/sort/search), `forMe` and `nextForPaywall` (shared picker — `due ASC NULLS FIRST` over the user's enrolled-course questions), `answer` (interactive `$transaction` that updates `UserQuestion` FSRS state, appends `QuestionAttempt`, EMA-updates `UserTopic`, and updates `UserStats`)
+- `question` — `list` (filter/sort/search), `forMe` and `nextForPaywall` (shared picker — `due ASC NULLS FIRST` over the user's enrolled-course questions), `answer` (rejects questions outside the user's enrolled courses with `FORBIDDEN`; interactive `$transaction` that takes a per-user `pg_advisory_xact_lock`, updates `UserQuestion` FSRS state, appends `QuestionAttempt`, EMA-updates `UserTopic`, updates `UserStats` XP/level/streak, and unlocks achievements; then does one awaited best-effort `AnalyticsEvent` batch write. Returns `xpDelta`, `newLevel`, `leveledUp`, streak fields, `newlyEarnedCodes`, and `newlyEarned[{code,name,xpReward}]`)
 - `topic` — `getAll`
+- `achievement` — `listForUser` (`earned` / `locked` with 0–1 progress for countable predicates)
 - `assessment` — empty placeholder
 
 Scoring in `src/server/lib/scoring/`: `mastery.ts` is the per-topic EMA (15-day half-life, decays toward 50; `applyMastery` on write, `readMastery` on read). `scheduler.ts` is a thin adapter over the `ts-fsrs` package — we persist `Card` fields directly on `UserQuestion` and never reimplement FSRS math. `picker.ts` is the shared raw-SQL "next due card" query used by `forMe` and `nextForPaywall`.
+
+Gamification in `src/server/lib/gamification/` (pure modules, unit-tested): `xp.ts` (5/10/20 XP by difficulty, 1 XP for incorrect; level N at `50·(N−1)·N` XP), `streak.ts` (UTC-day streak transition — a streak day is any day with an answer, correct or not), `achievements.ts` (predicate registry keyed by `Achievement.code`; must stay in lockstep with `prisma/achievements-seed.ts`, enforced by a test), `analytics.ts` (never-throwing event writers; always `await` them — fire-and-forget writes are dropped on serverless). Spec: `docs/superpowers/specs/2026-04-17-gamification-design.md`; extension follow-ups: `GAME_TODO.md`.
 
 ### UI
 Distinctive engineering-console theme — dark background, phosphor green / cyan / amber / magenta accents, Geist sans + JetBrains Mono, glassmorphism, custom keyframes (`term-rise`, `term-scan`, `term-blink`) defined in `src/styles/globals.css` via Tailwind v4 `@theme`. The sidebar (`src/components/app-sidebar.tsx`) wraps most app routes via `SidebarProvider` / `SidebarInset`.
@@ -65,7 +75,11 @@ Distinctive engineering-console theme — dark background, phosphor green / cyan
 - Session mode holds one Postgres backend per client session, so interactive transactions work.
 - Before scaling, revisit this — see `TODO.md` at repo root for options (transaction pooler + remove interactive tx, Neon HTTP driver, etc.).
 
-Do **not** switch back to port `6543` without first refactoring `question.answer` and any other interactive transactions.
+Do **not** switch back to port `6543` without first refactoring `question.answer` and any other interactive transactions (including its `pg_advisory_xact_lock`, which also relies on a dedicated backend for the transaction).
+
+## Deployment
+
+Vercel project `unimind-revamped`, root directory `unimind/`. `postinstall` runs `prisma generate`. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `DIRECT_URL`. Apply schema changes with `npm run db:migrate` (`prisma migrate deploy`) against the target DB before deploying code that depends on them; `next build` fails on ESLint errors, so run `npm run lint` first.
 
 ## Workflow conventions
 
