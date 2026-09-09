@@ -1,30 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, RotateCcw, Search, X } from "lucide-react";
 import { SidebarTrigger } from "~/components/ui/sidebar";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 import { DIFFICULTIES, difficultyLabel } from "~/lib/question-display";
+import {
+  type AnswerSubmissionState,
+  useStableAnswerSubmission,
+} from "~/hooks/use-stable-answer-submission";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
-type SortKey = "Recent" | "Difficulty" | "Topic";
-
+const SORTS = ["Recent", "Difficulty", "Topic"] as const;
+type SortKey = (typeof SORTS)[number];
 type Question = RouterOutputs["question"]["list"][number];
-type AnswerResult = {
-  isCorrect: boolean;
-  answerIndex: number;
-  explanation: string | null;
-  xpDelta: number;
-  leveledUp: boolean;
-  newLevel: number;
-  newlyEarned: Array<{ code: string; name: string; xpReward: number }>;
-};
 
 export function QuestionsView() {
   const [topicFilter, setTopicFilter] = useState<{ id: string; name: string } | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<1 | 2 | 3 | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("Recent");
+  const [picks, setPicks] = useState<Record<string, number>>({});
+  const submission = useStableAnswerSubmission();
 
   const topicsQuery = api.topic.getAll.useQuery();
   const questionsQuery = api.question.list.useQuery({
@@ -34,15 +31,10 @@ export function QuestionsView() {
     limit: 50,
   });
 
-  const answer = api.question.answer.useMutation();
-
-  const [picks, setPicks] = useState<Record<string, number>>({});
-  const [results, setResults] = useState<Record<string, AnswerResult>>({});
-
-  const topicChips = useMemo(() => {
-    const list = topicsQuery.data ?? [];
-    return list.map((t) => ({ id: t.id, name: t.name }));
-  }, [topicsQuery.data]);
+  const topicChips = useMemo(
+    () => (topicsQuery.data ?? []).map((topic) => ({ id: topic.id, name: topic.name })),
+    [topicsQuery.data],
+  );
 
   const sorted = useMemo(() => {
     const list = [...(questionsQuery.data ?? [])];
@@ -51,48 +43,37 @@ export function QuestionsView() {
     return list;
   }, [questionsQuery.data, sort]);
 
-  function handleCheck(q: Question) {
-    const choice = picks[q.id];
-    if (choice === undefined || results[q.id] || answer.isPending) return;
-    const rating = choice === q.answerIndex ? 3 : 1;
-    answer.mutate(
-      { questionId: q.id, choiceIndex: choice, rating, source: "in_app" },
-      {
-        onSuccess: (res) => {
-          setResults((r) => ({
-            ...r,
-            [q.id]: {
-              isCorrect: res.isCorrect,
-              answerIndex: res.answerIndex,
-              explanation: res.explanation,
-              xpDelta: res.xpDelta,
-              leveledUp: res.leveledUp,
-              newLevel: res.newLevel,
-              newlyEarned: res.newlyEarned,
-            },
-          }));
-        },
-      },
-    );
-  }
+  const answered = sorted.filter(
+    (question) => submission.states[question.id]?.status === "success",
+  ).length;
+  const correct = sorted.filter((question) => {
+    const state = submission.states[question.id];
+    return state?.status === "success" && state.data.isCorrect;
+  }).length;
 
-  const totalCount = sorted.length;
-  const answered = Object.keys(results).length;
-  const correct = Object.values(results).filter((r) => r.isCorrect).length;
+  function handleCheck(question: Question) {
+    const choice = picks[question.id];
+    if (choice === undefined || submission.states[question.id] !== undefined) return;
+    submission.submit({
+      questionId: question.id,
+      choiceIndex: choice,
+      rating: choice === question.answerIndex ? 3 : 1,
+      source: "in_app",
+    });
+  }
 
   return (
     <div className="min-h-svh bg-[color:var(--color-void)] text-[color:var(--color-fg)]">
       <header className="sticky top-0 z-10 border-b border-[color:var(--color-rule)] bg-[color:var(--color-void)]/90 backdrop-blur">
-        <div className="flex h-12 items-center gap-3 px-4">
-          <SidebarTrigger className="-ml-1 text-[color:var(--color-fg-soft)]" />
+        <div className="flex min-h-12 items-center gap-3 px-4 py-2">
+          <SidebarTrigger className="-ml-1 shrink-0 text-[color:var(--color-fg-soft)]" />
           <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">
-            Unimind <span className="text-[color:var(--color-fg-mute)]">/</span>{" "}
+            Unimind <span aria-hidden>/</span>{" "}
             <span className="text-[color:var(--color-fg)]">Questions</span>
           </span>
-          <span className="ml-auto font-mono text-[11px] text-[color:var(--color-fg-mute)]">
-            <span className="text-[color:var(--color-fg)] tabular-nums">{answered}</span>
-            /{totalCount} answered
-            <span className="mx-2 text-[color:var(--color-rule-hi)]">·</span>
+          <span className="ml-auto text-right font-mono text-[10px] leading-tight text-[color:var(--color-fg-mute)] sm:text-[11px]">
+            <span className="text-[color:var(--color-fg)] tabular-nums">{answered}</span>/{sorted.length} answered
+            <span aria-hidden className="mx-1.5 text-[color:var(--color-rule-hi)] sm:mx-2">·</span>
             <span className="text-[color:var(--color-phosphor)] tabular-nums">{correct}</span> correct
           </span>
         </div>
@@ -101,116 +82,134 @@ export function QuestionsView() {
 
       <main className="px-4 pb-16 pt-6 md:px-8">
         <section className="term-rise">
-          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[color:var(--color-fg-mute)]">
-            Practice
-          </div>
-          <h1 className="mt-2 font-mono text-[36px] font-semibold leading-[1] tracking-tight md:text-[44px]">
-            Question set
-          </h1>
+          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[color:var(--color-fg-mute)]">Practice</div>
+          <h1 className="mt-2 font-mono text-[36px] font-semibold leading-none tracking-tight md:text-[44px]">Question set</h1>
           <p className="mt-2 max-w-lg font-sans text-[14px] text-[color:var(--color-fg-soft)]">
             Filter by topic or difficulty, then answer at your own pace.
           </p>
         </section>
 
-        <section className="sticky top-12 z-[5] -mx-4 mt-6 border-y border-[color:var(--color-rule)] bg-[color:var(--color-void)]/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]">
-              <Search className="ml-3 h-3.5 w-3.5 shrink-0 text-[color:var(--color-fg-mute)]" strokeWidth={2} />
+        <section aria-label="Question controls" className="sticky top-12 z-[5] -mx-4 mt-6 border-y border-[color:var(--color-rule)] bg-[color:var(--color-void)]/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="flex min-w-0 flex-1 items-center border border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]">
+              <Search aria-hidden className="ml-3 h-3.5 w-3.5 shrink-0 text-[color:var(--color-fg-mute)]" strokeWidth={2} />
+              <label htmlFor="question-search" className="sr-only">Search questions, topics, or subtopics</label>
               <input
+                id="question-search"
+                type="search"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search questions, topics, or subtopics"
-                className="w-full bg-transparent px-3 py-2 font-sans text-[13px] text-[color:var(--color-fg)] outline-none placeholder:text-[color:var(--color-fg-mute)]"
+                className="min-w-0 w-full bg-transparent px-3 py-2 font-sans text-[13px] text-[color:var(--color-fg)] outline-none placeholder:text-[color:var(--color-fg-mute)]"
               />
             </div>
-            <div className="hidden items-center border border-[color:var(--color-rule-hi)] md:flex">
-              {(["Recent", "Difficulty", "Topic"] as SortKey[]).map((k) => (
-                <button
-                  key={k}
-                  onClick={() => setSort(k)}
-                  className={[
-                    "px-3 py-2 font-mono text-[11px] transition-colors",
-                    sort === k
-                      ? "bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
-                      : "text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]",
-                  ].join(" ")}
-                >
-                  {k}
-                </button>
-              ))}
-            </div>
+            <fieldset className="min-w-0 overflow-x-auto">
+              <legend className="sr-only">Sort questions</legend>
+              <div className="flex w-max items-center border border-[color:var(--color-rule-hi)]">
+                {SORTS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={sort === key}
+                    onClick={() => setSort(key)}
+                    className={[
+                      "min-h-9 px-3 py-2 font-mono text-[11px] transition-colors",
+                      sort === key
+                        ? "bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
+                        : "text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]",
+                    ].join(" ")}
+                  >
+                    {key}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-5">
             <FilterGroup label="Topic">
               <Chip active={topicFilter === null} onClick={() => setTopicFilter(null)}>All</Chip>
-              {topicChips.map((t) => (
+              {topicChips.map((topic) => (
                 <Chip
-                  key={t.id}
-                  active={topicFilter?.id === t.id}
-                  onClick={() => setTopicFilter(topicFilter?.id === t.id ? null : t)}
+                  key={topic.id}
+                  active={topicFilter?.id === topic.id}
+                  onClick={() => setTopicFilter(topicFilter?.id === topic.id ? null : topic)}
                 >
-                  {t.name}
+                  {topic.name}
                 </Chip>
               ))}
+              {topicsQuery.isLoading && <span className="px-1 font-sans text-[12px] text-[color:var(--color-fg-mute)]">Loading topics…</span>}
+              {topicsQuery.isError && (
+                <button type="button" disabled={topicsQuery.isFetching} onClick={() => void topicsQuery.refetch()} className="px-1 font-sans text-[12px] text-[color:var(--color-red)] hover:underline disabled:cursor-wait">
+                  {topicsQuery.isFetching ? "Retrying topics…" : "Topics unavailable · retry"}
+                </button>
+              )}
             </FilterGroup>
-
-            <div className="hidden h-5 w-px bg-[color:var(--color-rule)] md:block" />
-
+            <div aria-hidden className="hidden h-5 w-px bg-[color:var(--color-rule)] lg:block" />
             <FilterGroup label="Difficulty">
               <Chip active={difficultyFilter === null} onClick={() => setDifficultyFilter(null)}>Any</Chip>
-              {DIFFICULTIES.map((d) => (
+              {DIFFICULTIES.map((difficulty) => (
                 <Chip
-                  key={d}
-                  active={difficultyFilter === d}
-                  onClick={() => setDifficultyFilter(difficultyFilter === d ? null : d)}
+                  key={difficulty}
+                  active={difficultyFilter === difficulty}
+                  onClick={() => setDifficultyFilter(difficultyFilter === difficulty ? null : difficulty)}
                 >
-                  {difficultyLabel(d)}
+                  {difficultyLabel(difficulty)}
                 </Chip>
               ))}
             </FilterGroup>
           </div>
         </section>
 
-        <section className="mt-6 space-y-3">
-          {questionsQuery.isLoading && (
-            <div className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-mute)]">
-              Loading questions…
-            </div>
+        <section aria-busy={questionsQuery.isFetching} aria-label="Questions" className="mt-6 space-y-3">
+          {questionsQuery.isPending ? (
+            <QueryMessage role="status">Loading questions…</QueryMessage>
+          ) : questionsQuery.isError ? (
+            <QueryMessage role="alert">
+              <p>Questions could not be loaded.</p>
+              <button type="button" disabled={questionsQuery.isFetching} onClick={() => void questionsQuery.refetch()} className="mt-3 min-h-9 border border-[color:var(--color-red)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-red)] hover:bg-[color:var(--color-red)]/10 disabled:cursor-wait">
+                {questionsQuery.isFetching ? "Retrying questions…" : "Retry query"}
+              </button>
+            </QueryMessage>
+          ) : sorted.length === 0 ? (
+            <QueryMessage role="status">No questions match these filters.</QueryMessage>
+          ) : (
+            sorted.map((question, index) => (
+              <QuestionCard
+                key={question.id}
+                question={question}
+                index={index + 1}
+                picked={picks[question.id] ?? null}
+                state={submission.states[question.id]}
+                onPick={(choice) => {
+                  if (submission.states[question.id] !== undefined) return;
+                  setPicks((current) => ({ ...current, [question.id]: choice }));
+                }}
+                onCheck={() => handleCheck(question)}
+                onRetry={() => submission.retry(question.id)}
+              />
+            ))
           )}
-          {!questionsQuery.isLoading && sorted.length === 0 && (
-            <div className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center">
-              <p className="font-sans text-[15px] text-[color:var(--color-fg-soft)]">
-                No questions match these filters.
-              </p>
-            </div>
-          )}
-          {sorted.map((q, i) => (
-            <QuestionCard
-              key={q.id}
-              q={q}
-              index={i + 1}
-              picked={picks[q.id] ?? null}
-              result={results[q.id] ?? null}
-              onPick={(idx) => setPicks((p) => ({ ...p, [q.id]: idx }))}
-              onCheck={() => handleCheck(q)}
-              checking={answer.isPending}
-            />
-          ))}
         </section>
       </main>
     </div>
   );
 }
 
+function QueryMessage({ role, children }: { role: "alert" | "status"; children: React.ReactNode }) {
+  return (
+    <div role={role} className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
+      {children}
+    </div>
+  );
+}
+
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
-        {label}
-      </span>
-      <div className="flex flex-wrap gap-1">{children}</div>
-    </div>
+    <fieldset className="flex min-w-0 flex-wrap items-center gap-2">
+      <legend className="float-left mr-2 font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">{label}</legend>
+      <div className="flex min-w-0 flex-wrap gap-1">{children}</div>
+    </fieldset>
   );
 }
 
@@ -218,9 +217,10 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={[
-        "border px-2.5 py-1 font-sans text-[12px] transition-colors",
+        "min-h-8 border px-2.5 py-1 font-sans text-[12px] transition-colors",
         active
           ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
           : "border-[color:var(--color-rule-hi)] text-[color:var(--color-fg-soft)] hover:border-[color:var(--color-fg-soft)] hover:text-[color:var(--color-fg)]",
@@ -232,72 +232,73 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 }
 
 function QuestionCard({
-  q,
+  question,
   index,
   picked,
-  result,
+  state,
   onPick,
   onCheck,
-  checking,
+  onRetry,
 }: {
-  q: Question;
+  question: Question;
   index: number;
   picked: number | null;
-  result: AnswerResult | null;
-  onPick: (idx: number) => void;
+  state: AnswerSubmissionState | undefined;
+  onPick: (choice: number) => void;
   onCheck: () => void;
-  checking: boolean;
+  onRetry: () => void;
 }) {
+  const result = state?.status === "success" ? state.data : null;
   const revealed = result !== null;
+  const locked = state !== undefined;
   const correct = result?.isCorrect ?? false;
   const resultAnswerIndex = result?.answerIndex ?? -1;
+  const headingId = `question-${question.id}`;
+  const statusText = state?.status === "pending"
+    ? "Submitting answer."
+    : state?.status === "error"
+      ? "Answer submission failed. Your original answer is ready to retry."
+      : result
+        ? `${result.isCorrect ? "Correct" : "Incorrect"}. ${result.xpDelta} XP awarded.`
+        : picked === null
+          ? "Choose an answer."
+          : `Answer ${LETTERS[picked]} selected.`;
 
   return (
-    <article className="term-rise border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
+    <article aria-labelledby={headingId} className="term-rise border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2">
-        <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-fg-mute)]">
-          {String(index).padStart(2, "0")}
-        </span>
-        <span className="font-sans text-[13px] text-[color:var(--color-fg)]">{q.topic.name}</span>
-        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">·</span>
-        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">{q.subtopic.name}</span>
-        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">·</span>
-        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">{q.topic.course.name}</span>
+        <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-fg-mute)]">{String(index).padStart(2, "0")}</span>
+        <span className="font-sans text-[13px] text-[color:var(--color-fg)]">{question.topic.name}</span>
+        <span aria-hidden className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">·</span>
+        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">{question.subtopic.name}</span>
+        <span aria-hidden className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">·</span>
+        <span className="font-mono text-[11px] text-[color:var(--color-fg-mute)]">{question.topic.course.name}</span>
         <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-[color:var(--color-fg-mute)]">
-          <span className="text-[color:var(--color-phosphor)]">
-            {"●".repeat(q.difficulty)}
-            <span className="text-[color:var(--color-rule-hi)]">
-              {"●".repeat(3 - q.difficulty)}
-            </span>
+          <span aria-hidden className="text-[color:var(--color-phosphor)]">
+            {"●".repeat(question.difficulty)}<span className="text-[color:var(--color-rule-hi)]">{"●".repeat(3 - question.difficulty)}</span>
           </span>
-          {difficultyLabel(q.difficulty)}
+          {difficultyLabel(question.difficulty)}
         </span>
       </div>
 
       <div className="flex items-start gap-3 px-5 py-4">
-        <span aria-hidden className="select-none pt-0.5 font-mono text-[16px] leading-none text-[color:var(--color-phosphor)]">
-          &gt;
-        </span>
-        <h3 className="font-mono text-[15.5px] font-medium leading-snug text-[color:var(--color-fg)]">
-          {q.question}
-        </h3>
+        <span aria-hidden className="select-none pt-0.5 font-mono text-[16px] leading-none text-[color:var(--color-phosphor)]">&gt;</span>
+        <h2 id={headingId} className="font-mono text-[15.5px] font-medium leading-snug text-[color:var(--color-fg)]">{question.question}</h2>
       </div>
 
-      <ul className="grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2">
-        {q.choices.map((c, i) => {
-          const isPicked = picked === i;
-          const isAnswer = revealed && i === resultAnswerIndex;
+      <ul aria-label="Answer choices" className="grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2">
+        {question.choices.map((choice, choiceIndex) => {
+          const isPicked = picked === choiceIndex;
+          const isAnswer = revealed && choiceIndex === resultAnswerIndex;
           const isWrongPick = revealed && isPicked && !isAnswer;
-
-          const bg = isAnswer
+          const background = isAnswer
             ? "bg-[color:var(--color-phosphor)]/15"
             : isWrongPick
               ? "bg-[color:var(--color-red)]/12"
               : isPicked
                 ? "bg-[color:var(--color-cyan)]/10"
                 : "bg-[color:var(--color-panel)] hover:bg-[color:var(--color-panel-hi)]";
-
-          const chipCls = isAnswer
+          const chipClass = isAnswer
             ? "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]"
             : isWrongPick
               ? "border-[color:var(--color-red)] bg-[color:var(--color-red)] text-[color:var(--color-void)]"
@@ -306,85 +307,61 @@ function QuestionCard({
                 : "border-[color:var(--color-rule-hi)] text-[color:var(--color-fg-mute)] group-hover:border-[color:var(--color-fg-soft)]";
 
           return (
-            <li key={i}>
+            <li key={choiceIndex}>
               <button
                 type="button"
-                disabled={revealed}
-                onClick={() => onPick(i)}
-                className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${bg} ${revealed ? "cursor-default" : ""}`}
+                aria-pressed={isPicked}
+                disabled={locked}
+                onClick={() => onPick(choiceIndex)}
+                className={`group flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-not-allowed ${background}`}
               >
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center border font-mono text-[11px] ${chipCls}`}>
-                  {LETTERS[i]}
-                </span>
-                <span className="font-sans text-[13.5px] leading-snug text-[color:var(--color-fg)]">
-                  {c}
-                </span>
-                {isAnswer && <Check className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-phosphor)]" strokeWidth={2.2} />}
-                {isWrongPick && <X className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-red)]" strokeWidth={2.2} />}
+                <span aria-hidden className={`flex h-6 w-6 shrink-0 items-center justify-center border font-mono text-[11px] ${chipClass}`}>{LETTERS[choiceIndex]}</span>
+                <span className="font-sans text-[13.5px] leading-snug text-[color:var(--color-fg)]"><span className="sr-only">Answer {LETTERS[choiceIndex]}: </span>{choice}</span>
+                {isAnswer && <Check aria-label="Correct answer" className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-phosphor)]" strokeWidth={2.2} />}
+                {isWrongPick && <X aria-label="Your answer" className="ml-auto h-4 w-4 shrink-0 text-[color:var(--color-red)]" strokeWidth={2.2} />}
               </button>
             </li>
           );
         })}
       </ul>
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2.5">
-        {result === null ? (
-          <>
-            <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
-              {picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}
-            </span>
+      <div className="border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-3">
+        <p role="status" aria-live="polite" className="sr-only">{statusText}</p>
+        {state?.status === "error" ? (
+          <div role="alert" className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="font-sans text-[12.5px] text-[color:var(--color-red)]">Could not confirm this answer. Retry sends the exact same attempt: {state.message}</p>
+            <button type="button" onClick={onRetry} className="inline-flex min-h-9 items-center justify-center gap-2 border border-[color:var(--color-red)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-red)] hover:bg-[color:var(--color-red)]/10 sm:ml-auto">
+              <RotateCcw className="h-3.5 w-3.5" /> Retry answer
+            </button>
+          </div>
+        ) : result === null ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">{picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}</span>
             <button
               type="button"
-              disabled={picked === null || checking}
+              disabled={picked === null || state?.status === "pending"}
               onClick={onCheck}
               className={[
-                "ml-auto border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors",
+                "min-h-9 border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors sm:ml-auto",
                 picked === null
                   ? "cursor-not-allowed border-[color:var(--color-rule)] text-[color:var(--color-fg-mute)]/60"
-                  : "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)] hover:bg-[color:var(--color-phosphor)]/90 shadow-[0_0_16px_-6px_var(--color-phosphor)]",
+                  : "border-[color:var(--color-phosphor)] bg-[color:var(--color-phosphor)] text-[color:var(--color-void)] shadow-[0_0_16px_-6px_var(--color-phosphor)] hover:bg-[color:var(--color-phosphor)]/90 disabled:cursor-wait disabled:opacity-70",
               ].join(" ")}
             >
-              Check
+              {state?.status === "pending" ? "Checking…" : "Check"}
             </button>
-          </>
+          </div>
         ) : (
-          <div className="flex w-full flex-col gap-1.5">
+          <div className="flex w-full flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em]"
-                style={{
-                  background: correct ? "var(--color-phosphor)" : "var(--color-red)",
-                  color: "var(--color-void)",
-                }}
-              >
-                {correct ? "Correct" : "Incorrect"}
-              </span>
-              <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">
-                Answer:{" "}
-                <span className="text-[color:var(--color-fg)]">
-                  {LETTERS[result.answerIndex]} — {q.choices[result.answerIndex]}
-                </span>
-              </span>
+              <span className={`px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] ${correct ? "bg-[color:var(--color-phosphor)] text-[color:var(--color-void)]" : "bg-[color:var(--color-red)] text-[color:var(--color-void)]"}`}>{correct ? "Correct" : "Incorrect"}</span>
+              <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">Answer: <span className="text-[color:var(--color-fg)]">{LETTERS[result.answerIndex]} — {question.choices[result.answerIndex]}</span></span>
             </div>
-            {result.explanation && (
-              <p className="font-sans text-[12.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
-                {result.explanation}
-              </p>
-            )}
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.2em]">
-              <span className="text-[color:var(--color-phosphor)]">
-                +{result.xpDelta} XP
-              </span>
-              {result.leveledUp && (
-                <span className="text-[color:var(--color-amber)]">
-                  Level {result.newLevel} ↑
-                </span>
-              )}
-              {result.newlyEarned.map((a) => (
-                <span key={a.code} className="text-[color:var(--color-cyan)]">
-                  🏅 {a.name} · +{a.xpReward} XP
-                </span>
-              ))}
+            {result.explanation && <p className="font-sans text-[12.5px] leading-relaxed text-[color:var(--color-fg-soft)]">{result.explanation}</p>}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.2em]">
+              <span className={correct ? "text-[color:var(--color-phosphor)]" : "text-[color:var(--color-fg-mute)]"}>+{result.xpDelta} XP</span>
+              {result.leveledUp && <span className="text-[color:var(--color-amber)]">Level {result.newLevel} ↑</span>}
+              {result.newlyEarned.map((achievement) => <span key={achievement.code} className="text-[color:var(--color-cyan)]">🏅 {achievement.name} · +{achievement.xpReward} XP</span>)}
             </div>
           </div>
         )}
