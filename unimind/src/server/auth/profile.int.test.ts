@@ -34,4 +34,32 @@ describe("ensureUserProfile (integration)", () => {
     expect(row.name).toBe("A");
     expect(await db.user.count({ where: { id } })).toBe(1);
   });
+
+  it("rejects an email collision under another UUID without attaching that profile", async () => {
+    const ownerId = randomUUID();
+    const requestedId = randomUUID();
+    const collidingEmail = `int-profile-collision-${ownerId}@example.test`;
+
+    try {
+      await db.user.create({
+        data: { id: ownerId, email: collidingEmail, name: "Owner" },
+      });
+
+      await expect(
+        ensureUserProfile(db, {
+          id: requestedId,
+          email: collidingEmail,
+          name: "Requester",
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+
+      expect(await db.user.findUnique({ where: { id: requestedId } })).toBeNull();
+      expect(
+        await db.user.findUniqueOrThrow({ where: { id: ownerId } }),
+      ).toMatchObject({ email: collidingEmail, name: "Owner" });
+    } finally {
+      await cleanup(requestedId);
+      await cleanup(ownerId);
+    }
+  });
 });

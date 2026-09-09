@@ -1,3 +1,5 @@
+import { TRPCError } from "@trpc/server";
+
 import type { PrismaClient } from "../../../generated/prisma";
 
 /**
@@ -14,8 +16,21 @@ export async function ensureUserProfile(
   db: PrismaClient,
   input: { id: string; email: string; name: string | null },
 ): Promise<void> {
-  await db.user.createMany({
+  const inserted = await db.user.createMany({
     data: [{ id: input.id, email: input.email, name: input.name }],
     skipDuplicates: true,
   });
+
+  if (inserted.count === 0) {
+    const requestedProfile = await db.user.findUnique({
+      where: { id: input.id },
+      select: { id: true },
+    });
+    if (!requestedProfile) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Unable to create user profile",
+      });
+    }
+  }
 }
