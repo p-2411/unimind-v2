@@ -9,6 +9,7 @@ import {
   LogOut,
   Settings,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import { UnimindLogo } from "~/components/logo";
 import { useSupabase } from "~/components/providers/supabase-provider";
@@ -26,12 +27,21 @@ import {
   SidebarMenuItem,
 } from "~/components/ui/sidebar";
 
-const items = [
-  { title: "Dashboard", url: "/",          icon: LayoutGrid },
-  { title: "Questions", url: "/questions", icon: ListOrdered },
-  { title: "Topics",    url: "/topics",    icon: BookOpenText },
-  { title: "Progress",  url: "/progress",  icon: TrendingUp },
-  { title: "Settings",  url: "/settings",  icon: Settings },
+type NavItem = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  /** Not yet built — rendered as a disabled, non-navigating entry. */
+  soon?: boolean;
+};
+
+const items: NavItem[] = [
+  { title: "Dashboard",    url: "/",             icon: LayoutGrid },
+  { title: "Questions",    url: "/questions",    icon: ListOrdered },
+  { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "Topics",       url: "/topics",       icon: BookOpenText, soon: true },
+  { title: "Progress",     url: "/progress",     icon: TrendingUp,   soon: true },
+  { title: "Settings",     url: "/settings",     icon: Settings,     soon: true },
 ];
 
 export function AppSidebar() {
@@ -62,6 +72,26 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
+                if (item.soon) {
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        aria-disabled="true"
+                        tabIndex={-1}
+                        className="h-9 cursor-default rounded-none border-l-2 border-transparent pl-3 text-[color:var(--color-fg-mute)] aria-disabled:opacity-100"
+                      >
+                        <item.icon className="h-4 w-4" strokeWidth={1.75} />
+                        <span className="font-sans text-[13.5px] tracking-tight">
+                          {item.title}
+                        </span>
+                        <span className="ml-auto border border-[color:var(--color-rule-hi)] px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.18em] text-[color:var(--color-fg-mute)]">
+                          soon
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                }
+
                 const active =
                   item.url === "/"
                     ? pathname === "/"
