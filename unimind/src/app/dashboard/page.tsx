@@ -1,6 +1,7 @@
 import { Flame, Sparkles } from "lucide-react";
 import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { xpProgressForLevel } from "~/server/lib/gamification";
 import { PreviewQuestion } from "./preview-question";
 import { Greeting } from "./greeting";
 
@@ -27,6 +28,9 @@ export default async function Dashboard() {
 
   const quote = QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
   const calibrating = stats.accuracy === null;
+
+  const { level, xpInLevel, xpForNextLevel } = xpProgressForLevel(stats.xp);
+  const xpPct = xpForNextLevel === 0 ? 100 : Math.round((xpInLevel / xpForNextLevel) * 100);
 
   const tiles = [
     {
@@ -61,10 +65,11 @@ export default async function Dashboard() {
     },
     {
       label: "Level",
-      value: `L${stats.level}`,
-      delta: `${stats.xp} XP`,
+      value: `L${level}`,
+      delta: `${xpInLevel} / ${xpForNextLevel} XP`,
       tone: "phosphor" as const,
       icon: null,
+      bar: { pct: xpPct, color: "var(--color-phosphor)" } as const,
     },
   ];
 
@@ -125,6 +130,14 @@ export default async function Dashboard() {
               <div className="mt-2 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
                 {s.delta}
               </div>
+              {"bar" in s && s.bar && (
+                <div className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
+                  <div
+                    className="h-full"
+                    style={{ width: `${s.bar.pct}%`, background: s.bar.color }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </section>

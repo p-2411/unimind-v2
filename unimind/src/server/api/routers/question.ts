@@ -8,6 +8,16 @@ import {
   applyMastery,
   pickNextQuestionId,
 } from "~/server/lib/scoring";
+import {
+  xpForAnswer,
+  levelForXp,
+  updateStreak,
+  evaluateAchievement,
+  ALL_ACHIEVEMENT_CODES,
+  type AchievementContext,
+  logAnalyticsEvent,
+  ANALYTICS_EVENTS,
+} from "~/server/lib/gamification";
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
@@ -123,6 +133,7 @@ export const questionRouter = createTRPCRouter({
           topicId: true,
           answerIndex: true,
           explanation: true,
+          difficulty: true,
           topic: { select: { name: true } },
         },
       });
@@ -134,6 +145,16 @@ export const questionRouter = createTRPCRouter({
       const now = new Date();
       const today = new Date(now);
       today.setUTCHours(0, 0, 0, 0);
+
+      // Static catalog — pre-fetch outside the transaction so the unlock
+      // loop avoids N serial round-trips over the remote pooler.
+      const achievementCatalog = await ctx.db.achievement.findMany({
+        where: { code: { in: [...ALL_ACHIEVEMENT_CODES] } },
+        select: { id: true, code: true, xpReward: true },
+      });
+      const catalogByCode = new Map(
+        achievementCatalog.map((a) => [a.code, { id: a.id, xpReward: a.xpReward }]),
+      );
 
       const result = await ctx.db.$transaction(async (tx) => {
         // 1. Load existing UserQuestion (or null = unseen).
@@ -244,7 +265,33 @@ export const questionRouter = createTRPCRouter({
           },
         });
 
-        // 6. Update UserStats (unchanged from current logic).
+        // 6. Compute XP / level / streak from the existing UserStats row.
+        const existingStats = await tx.userStats.findUnique({
+          where: { userId },
+          select: {
+            xp: true,
+            level: true,
+            currentStreak: true,
+            longestStreak: true,
+            lastActiveDate: true,
+          },
+        });
+
+        const xpDelta = xpForAnswer({
+          isCorrect,
+          difficulty: question.difficulty,
+        });
+        const newXp = (existingStats?.xp ?? 0) + xpDelta;
+        const newLevel = levelForXp(newXp);
+        const leveledUp = newLevel > (existingStats?.level ?? 1);
+
+        const streak = updateStreak({
+          currentStreak: existingStats?.currentStreak ?? 0,
+          longestStreak: existingStats?.longestStreak ?? 0,
+          lastActiveDate: existingStats?.lastActiveDate ?? null,
+          today,
+        });
+
         await tx.userStats.upsert({
           where: { userId },
           create: {
@@ -252,18 +299,154 @@ export const questionRouter = createTRPCRouter({
             totalQuestionsAnswered: 1,
             totalCorrectAnswers: isCorrect ? 1 : 0,
             totalTimeSpent: input.timeSpentMs,
-            lastActiveDate: today,
+            xp: xpDelta,
+            level: levelForXp(xpDelta),
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak,
+            lastActiveDate: streak.lastActiveDate,
           },
           update: {
             totalQuestionsAnswered: { increment: 1 },
             totalCorrectAnswers: { increment: isCorrect ? 1 : 0 },
             totalTimeSpent: { increment: input.timeSpentMs },
-            lastActiveDate: today,
+            xp: newXp,
+            level: newLevel,
+            currentStreak: streak.currentStreak,
+            longestStreak: streak.longestStreak,
+            lastActiveDate: streak.lastActiveDate,
           },
         });
 
-        return { userTopic, nextDue: card.due };
+        // 7. Achievement evaluation. Build a post-answer context snapshot,
+        // evaluate every registered predicate, and insert UserAchievement rows
+        // for previously-unearned codes. Earned XP rewards are summed and
+        // applied in a single stats patch below.
+        const [
+          topicAggregates,
+          distinctTopicsCount,
+          distinctCoursesCount,
+          totalAnswersAgg,
+          alreadyEarned,
+        ] = await Promise.all([
+          tx.userTopic.findMany({
+            where: { userId },
+            select: { masteryScore: true },
+          }),
+          tx.userTopic.count({ where: { userId } }),
+          tx.userCourse.count({ where: { userId } }),
+          tx.userStats.findUnique({
+            where: { userId },
+            select: { totalCorrectAnswers: true, totalQuestionsAnswered: true },
+          }),
+          tx.userAchievement.findMany({
+            where: { userId },
+            select: { achievement: { select: { code: true } } },
+          }),
+        ]);
+
+        const ctxForAchievements: AchievementContext = {
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+          totalCorrectAnswers: totalAnswersAgg?.totalCorrectAnswers ?? 0,
+          totalQuestionsAnswered: totalAnswersAgg?.totalQuestionsAnswered ?? 0,
+          level: newLevel,
+          topicsWithMastery70: topicAggregates.filter((t) => t.masteryScore >= 70).length,
+          topicsWithMastery85: topicAggregates.filter((t) => t.masteryScore >= 85).length,
+          distinctTopicsPracticed: distinctTopicsCount,
+          distinctCoursesPracticed: distinctCoursesCount,
+          justAnsweredDifficulty: question.difficulty,
+          justAnsweredCorrectly: isCorrect,
+          hasAnsweredAnyQuestion: (totalAnswersAgg?.totalQuestionsAnswered ?? 0) > 0,
+        };
+
+        const earnedCodes = new Set(alreadyEarned.map((r) => r.achievement.code));
+        const newlyEarnedCodes: string[] = [];
+        let bonusXp = 0;
+
+        for (const code of ALL_ACHIEVEMENT_CODES) {
+          if (earnedCodes.has(code)) continue;
+          if (!evaluateAchievement(code, ctxForAchievements)) continue;
+          const row = catalogByCode.get(code);
+          if (!row) continue;
+          await tx.userAchievement.create({
+            data: { userId, achievementId: row.id },
+          });
+          newlyEarnedCodes.push(code);
+          bonusXp += row.xpReward;
+        }
+
+        let finalXp = newXp;
+        let finalLevel = newLevel;
+        let finalLeveledUp = leveledUp;
+        if (bonusXp > 0) {
+          finalXp = newXp + bonusXp;
+          finalLevel = levelForXp(finalXp);
+          finalLeveledUp = finalLevel > (existingStats?.level ?? 1);
+          await tx.userStats.update({
+            where: { userId },
+            data: { xp: finalXp, level: finalLevel },
+          });
+        }
+
+        return {
+          userTopic,
+          nextDue: card.due,
+          xpDelta: xpDelta + bonusXp,
+          newXp: finalXp,
+          newLevel: finalLevel,
+          leveledUp: finalLeveledUp,
+          streakExtended: streak.streakExtended,
+          streakLost: streak.streakLost,
+          currentStreak: streak.currentStreak,
+          longestStreak: streak.longestStreak,
+          newlyEarnedCodes,
+        };
+      }, {
+        // Remote pooler adds latency; default 5000ms is tight for this mutation.
+        maxWait: 5_000,
+        timeout: 15_000,
       });
+
+      // Best-effort analytics. Do not await (fire-and-forget).
+      void logAnalyticsEvent(ctx.db, {
+        userId,
+        eventType: ANALYTICS_EVENTS.PAYWALL_ANSWERED,
+        payload: {
+          isCorrect,
+          difficulty: question.difficulty,
+          xpGranted: result.xpDelta,
+          source: input.source,
+        },
+      });
+
+      if (result.streakExtended) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.STREAK_EXTENDED,
+          payload: { length: result.currentStreak },
+        });
+      }
+      if (result.streakLost) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.STREAK_LOST,
+          payload: { priorLongest: result.longestStreak },
+        });
+      }
+      if (result.leveledUp) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.LEVEL_UP,
+          payload: { toLevel: result.newLevel },
+        });
+      }
+      for (const code of result.newlyEarnedCodes) {
+        void logAnalyticsEvent(ctx.db, {
+          userId,
+          eventType: ANALYTICS_EVENTS.ACHIEVEMENT_EARNED,
+          payload: { code },
+        });
+      }
 
       return {
         isCorrect,
@@ -271,6 +454,15 @@ export const questionRouter = createTRPCRouter({
         explanation: question.explanation,
         userTopic: result.userTopic,
         nextDue: result.nextDue,
+        xpDelta: result.xpDelta,
+        newXp: result.newXp,
+        newLevel: result.newLevel,
+        leveledUp: result.leveledUp,
+        streakExtended: result.streakExtended,
+        streakLost: result.streakLost,
+        currentStreak: result.currentStreak,
+        longestStreak: result.longestStreak,
+        newlyEarnedCodes: result.newlyEarnedCodes,
       };
     }),
 });
