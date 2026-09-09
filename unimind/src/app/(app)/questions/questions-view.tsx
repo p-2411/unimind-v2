@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Check, Search, X } from "lucide-react";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { api, type RouterOutputs } from "~/trpc/react";
@@ -22,10 +21,6 @@ type AnswerResult = {
 };
 
 export function QuestionsView() {
-  const search = useSearchParams();
-  const seedId = search.get("seed");
-  const seedPick = search.get("pick");
-
   const [topicFilter, setTopicFilter] = useState<{ id: string; name: string } | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<1 | 2 | 3 | null>(null);
   const [query, setQuery] = useState("");
@@ -53,49 +48,8 @@ export function QuestionsView() {
     const list = [...(questionsQuery.data ?? [])];
     if (sort === "Difficulty") list.sort((a, b) => a.difficulty - b.difficulty);
     if (sort === "Topic") list.sort((a, b) => a.topic.name.localeCompare(b.topic.name));
-    if (seedId) {
-      const idx = list.findIndex((q) => q.id === seedId);
-      if (idx > 0) {
-        const [pin] = list.splice(idx, 1);
-        if (pin) list.unshift(pin);
-      }
-    }
     return list;
-  }, [questionsQuery.data, sort, seedId]);
-
-  // Auto-submit the seed pick once the questions list has loaded
-  useEffect(() => {
-    if (!seedId || seedPick === null) return;
-    if (results[seedId]) return;
-    if (!questionsQuery.isSuccess) return;
-    const choice = Number(seedPick);
-    if (Number.isNaN(choice)) return;
-    // Bail out if the seed question isn't in the loaded list yet
-    const seedQ = questionsQuery.data.find((x) => x.id === seedId);
-    if (!seedQ) return;
-    setPicks((p) => ({ ...p, [seedId]: choice }));
-    const rating = choice === seedQ.answerIndex ? 3 : 1;
-    answer.mutate(
-      { questionId: seedId, choiceIndex: choice, rating, source: "in_app" },
-      {
-        onSuccess: (res) => {
-          setResults((r) => ({
-            ...r,
-            [seedId]: {
-              isCorrect: res.isCorrect,
-              answerIndex: res.answerIndex,
-              explanation: res.explanation,
-              xpDelta: res.xpDelta,
-              leveledUp: res.leveledUp,
-              newLevel: res.newLevel,
-              newlyEarned: res.newlyEarned,
-            },
-          }));
-        },
-      },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedId, seedPick, questionsQuery.isSuccess]);
+  }, [questionsQuery.data, sort]);
 
   function handleCheck(q: Question) {
     const choice = picks[q.id];
