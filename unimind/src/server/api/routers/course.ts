@@ -4,6 +4,7 @@ import {
   createTRPCRouter,
   protectedProcedure,
 } from "~/server/api/trpc";
+import { lockUser } from "~/server/lib/user-lock";
 
 export const courseRouter = createTRPCRouter({
   list: protectedProcedure.query(({ ctx }) =>
@@ -41,20 +42,30 @@ export const courseRouter = createTRPCRouter({
       const { courseId } = input;
 
       // Hard reset: wipe all per-user state for this course in one transaction.
-      await ctx.db.$transaction([
-        ctx.db.questionAttempt.deleteMany({
-          where: { userId, topic: { courseId } },
-        }),
-        ctx.db.userQuestion.deleteMany({
-          where: { userId, question: { topic: { courseId } } },
-        }),
-        ctx.db.userTopic.deleteMany({
-          where: { userId, topic: { courseId } },
-        }),
-        ctx.db.userCourse.delete({
-          where: { userId_courseId: { userId, courseId } },
-        }),
-      ]);
+      // Takes the same per-user lock as question.answer so an in-flight answer
+      // cannot re-create per-course state after it has been wiped here.
+      await ctx.db.$transaction(
+        async (tx) => {
+          await lockUser(tx, userId);
+          await tx.questionAttempt.deleteMany({
+            where: { userId, topic: { courseId } },
+          });
+          await tx.userQuestion.deleteMany({
+            where: { userId, question: { topic: { courseId } } },
+          });
+          await tx.userTopic.deleteMany({
+            where: { userId, topic: { courseId } },
+          });
+          await tx.userCourse.delete({
+            where: { userId_courseId: { userId, courseId } },
+          });
+        },
+        {
+          // Remote pooler adds latency; default 5000ms is tight.
+          maxWait: 5_000,
+          timeout: 15_000,
+        },
+      );
 
       return { ok: true };
     }),
