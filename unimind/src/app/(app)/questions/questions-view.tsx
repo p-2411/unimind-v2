@@ -18,7 +18,7 @@ type AnswerResult = {
   xpDelta: number;
   leveledUp: boolean;
   newLevel: number;
-  newlyEarnedCodes: string[];
+  newlyEarned: Array<{ code: string; name: string; xpReward: number }>;
 };
 
 export function QuestionsView() {
@@ -50,7 +50,7 @@ export function QuestionsView() {
   }, [topicsQuery.data]);
 
   const sorted = useMemo(() => {
-    let list = [...(questionsQuery.data ?? [])];
+    const list = [...(questionsQuery.data ?? [])];
     if (sort === "Difficulty") list.sort((a, b) => a.difficulty - b.difficulty);
     if (sort === "Topic") list.sort((a, b) => a.topic.name.localeCompare(b.topic.name));
     if (seedId) {
@@ -88,7 +88,7 @@ export function QuestionsView() {
               xpDelta: res.xpDelta,
               leveledUp: res.leveledUp,
               newLevel: res.newLevel,
-              newlyEarnedCodes: res.newlyEarnedCodes,
+              newlyEarned: res.newlyEarned,
             },
           }));
         },
@@ -114,7 +114,7 @@ export function QuestionsView() {
               xpDelta: res.xpDelta,
               leveledUp: res.leveledUp,
               newLevel: res.newLevel,
-              newlyEarnedCodes: res.newlyEarnedCodes,
+              newlyEarned: res.newlyEarned,
             },
           }));
         },
@@ -296,6 +296,7 @@ function QuestionCard({
 }) {
   const revealed = result !== null;
   const correct = result?.isCorrect ?? false;
+  const resultAnswerIndex = result?.answerIndex ?? -1;
 
   return (
     <article className="term-rise border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
@@ -331,7 +332,7 @@ function QuestionCard({
       <ul className="grid grid-cols-1 gap-px border-t border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2">
         {q.choices.map((c, i) => {
           const isPicked = picked === i;
-          const isAnswer = revealed && result !== null && i === result.answerIndex;
+          const isAnswer = revealed && i === resultAnswerIndex;
           const isWrongPick = revealed && isPicked && !isAnswer;
 
           const bg = isAnswer
@@ -373,7 +374,7 @@ function QuestionCard({
       </ul>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--color-rule)] bg-[color:var(--color-panel-hi)] px-4 py-2.5">
-        {!revealed ? (
+        {result === null ? (
           <>
             <span className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
               {picked === null ? "Pick an answer" : `Selected ${LETTERS[picked]}`}
@@ -407,27 +408,27 @@ function QuestionCard({
               <span className="font-sans text-[12.5px] text-[color:var(--color-fg-mute)]">
                 Answer:{" "}
                 <span className="text-[color:var(--color-fg)]">
-                  {LETTERS[result!.answerIndex]} — {q.choices[result!.answerIndex]}
+                  {LETTERS[result.answerIndex]} — {q.choices[result.answerIndex]}
                 </span>
               </span>
             </div>
-            {result?.explanation && (
+            {result.explanation && (
               <p className="font-sans text-[12.5px] leading-relaxed text-[color:var(--color-fg-soft)]">
                 {result.explanation}
               </p>
             )}
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.2em]">
               <span className="text-[color:var(--color-phosphor)]">
-                +{result!.xpDelta} XP
+                +{result.xpDelta} XP
               </span>
-              {result!.leveledUp && (
+              {result.leveledUp && (
                 <span className="text-[color:var(--color-amber)]">
-                  Level {result!.newLevel} ↑
+                  Level {result.newLevel} ↑
                 </span>
               )}
-              {result!.newlyEarnedCodes.map((code) => (
-                <span key={code} className="text-[color:var(--color-cyan)]">
-                  🏅 {code}
+              {result.newlyEarned.map((a) => (
+                <span key={a.code} className="text-[color:var(--color-cyan)]">
+                  🏅 {a.name} · +{a.xpReward} XP
                 </span>
               ))}
             </div>

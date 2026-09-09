@@ -5,6 +5,20 @@ import type { RouterOutputs } from "~/trpc/react";
 
 type Data = RouterOutputs["achievement"]["listForUser"];
 
+type Tile =
+  | {
+      kind: "earned";
+      achievement: Data["earned"][number]["achievement"];
+      earnedAt: Date;
+      progress: number;
+    }
+  | {
+      kind: "locked";
+      achievement: Data["locked"][number]["achievement"];
+      earnedAt: null;
+      progress: number | null;
+    };
+
 const CATEGORIES = ["all", "streak", "volume", "mastery", "breadth", "meta"] as const;
 type Category = (typeof CATEGORIES)[number];
 
@@ -13,14 +27,14 @@ export function AchievementsGrid({ data }: { data: Data }) {
   const [lockedOnly, setLockedOnly] = useState(false);
 
   const tiles = useMemo(() => {
-    const earned = data.earned.map((e) => ({
-      kind: "earned" as const,
+    const earned: Tile[] = data.earned.map((e) => ({
+      kind: "earned",
       achievement: e.achievement,
       earnedAt: e.earnedAt,
       progress: 1,
     }));
-    const locked = data.locked.map((l) => ({
-      kind: "locked" as const,
+    const locked: Tile[] = data.locked.map((l) => ({
+      kind: "locked",
       achievement: l.achievement,
       earnedAt: null,
       progress: l.progress,
@@ -86,7 +100,7 @@ export function AchievementsGrid({ data }: { data: Data }) {
                   }}
                 >
                   {t.kind === "earned"
-                    ? `Earned · ${t.earnedAt!.toISOString().slice(0, 10)}`
+                    ? `Earned · ${t.earnedAt.toISOString().slice(0, 10)}`
                     : pct === null
                       ? "Locked"
                       : `Locked · ${pct}%`}

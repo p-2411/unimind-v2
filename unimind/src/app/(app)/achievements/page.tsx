@@ -1,10 +1,5 @@
 import { api, HydrateClient } from "~/trpc/server";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "~/components/ui/sidebar";
-import { AppSidebar } from "~/components/app-sidebar";
+import { SidebarTrigger } from "~/components/ui/sidebar";
 import { AchievementsGrid } from "./achievements-grid";
 
 export default async function AchievementsPage() {
@@ -12,12 +7,7 @@ export default async function AchievementsPage() {
 
   return (
     <HydrateClient>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <AchievementsContent data={data} />
-        </SidebarInset>
-      </SidebarProvider>
+      <AchievementsContent data={data} />
     </HydrateClient>
   );
 }

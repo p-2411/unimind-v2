@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { Flame, Sparkles } from "lucide-react";
 import { api } from "~/trpc/server";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { xpProgressForLevel } from "~/server/lib/gamification";
-import { PreviewQuestion } from "./preview-question";
-import { Greeting } from "./greeting";
+import { PreviewQuestion } from "./_components/preview-question";
+import { Greeting } from "./_components/greeting";
 
 const QUOTES = [
   { q: "It does not matter how slowly you go as long as you do not stop.", a: "Confucius" },
@@ -20,10 +21,11 @@ const QUOTES = [
   { q: "Little by little, one travels far.", a: "J.R.R. Tolkien" },
 ];
 
-export default async function Dashboard() {
-  const [stats, nextQuestion] = await Promise.all([
+export async function DashboardView() {
+  const [stats, nextQuestion, percentile] = await Promise.all([
     api.user.dashboardStats(),
     api.question.forMe(),
+    api.user.weeklyPercentile(),
   ]);
 
   const quote = QUOTES[Math.floor(Date.now() / 86_400_000) % QUOTES.length]!;
@@ -140,6 +142,88 @@ export default async function Dashboard() {
               )}
             </div>
           ))}
+        </section>
+
+        <section className="mt-8 grid grid-cols-12 gap-4">
+          <div className="col-span-12 lg:col-span-8">
+            <SectionHead title="Achievements" hint="recent & next" />
+            <div className="mt-3 grid grid-cols-1 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 lg:grid-cols-3">
+              {stats.recentEarned.map((e) => (
+                <div
+                  key={e.achievement.id}
+                  className="bg-[color:var(--color-panel)] p-4"
+                >
+                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--color-phosphor)]">
+                    Earned · {e.earnedAt.toISOString().slice(0, 10)}
+                  </div>
+                  <div className="mt-1 font-mono text-[14px] text-[color:var(--color-fg)]">
+                    {e.achievement.name}
+                  </div>
+                  <div className="mt-0.5 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
+                    {e.achievement.description}
+                  </div>
+                </div>
+              ))}
+              {stats.nextClosest.map((x) => {
+                const pct = Math.round((x.progress ?? 0) * 100);
+                return (
+                  <div
+                    key={x.achievement.id}
+                    className="bg-[color:var(--color-panel)] p-4 opacity-80"
+                  >
+                    <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--color-fg-mute)]">
+                      Locked · {pct}%
+                    </div>
+                    <div className="mt-1 font-mono text-[14px] text-[color:var(--color-fg-soft)]">
+                      {x.achievement.name}
+                    </div>
+                    <div className="mt-0.5 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
+                      {x.achievement.description}
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
+                      <div
+                        className="h-full bg-[color:var(--color-cyan)]"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {stats.recentEarned.length === 0 && stats.nextClosest.length === 0 && (
+                <div className="bg-[color:var(--color-panel)] p-6 text-center font-sans text-[13px] text-[color:var(--color-fg-mute)] sm:col-span-2 lg:col-span-3">
+                  Answer a question to start earning achievements.
+                </div>
+              )}
+            </div>
+            <div className="mt-2 text-right">
+              <Link
+                href="/achievements"
+                className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--color-cyan)] hover:underline"
+              >
+                View all →
+              </Link>
+            </div>
+          </div>
+
+          <div className="col-span-12 lg:col-span-4">
+            <SectionHead title="Standing" />
+            <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+              {percentile ? (
+                <>
+                  <div className="font-mono text-[28px] tabular-nums text-[color:var(--color-cyan)]">
+                    Top {100 - percentile.percentile}%
+                  </div>
+                  <div className="mt-1 font-sans text-[12px] text-[color:var(--color-fg-mute)]">
+                    More answers this week than {percentile.percentile}% of {percentile.cohortSize} active users.
+                  </div>
+                </>
+              ) : (
+                <div className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
+                  Percentile appears once at least 20 users practise in a week.
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="mt-8 grid grid-cols-12 gap-4">
