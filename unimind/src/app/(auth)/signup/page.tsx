@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useSupabase } from "~/components/providers/supabase-provider";
+import {
+  AuthError,
+  AuthField,
+  AuthNotice,
+  AuthSubmit,
+} from "~/components/auth-form";
 import { AuthPane } from "~/components/auth-pane";
-import { AuthError, AuthField, AuthSubmit } from "~/components/auth-form";
+import { useSupabase } from "~/components/providers/supabase-provider";
+
+const NETWORK_ERROR =
+  "Unable to reach the signup service. Check your connection and try again.";
 
 export default function SignupPage() {
   const { supabase } = useSupabase();
@@ -12,12 +20,35 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function clearFeedback() {
+    setError(null);
+    setNotice(null);
+  }
+
+  function updateFullName(value: string) {
+    setFullName(value);
+    clearFeedback();
+  }
+
+  function updateEmail(value: string) {
+    setEmail(value);
+    clearFeedback();
+  }
+
+  function updatePassword(value: string) {
+    setPassword(value);
+    clearFeedback();
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
-    setError(null);
+    clearFeedback();
 
     const trimmedName = fullName.trim();
     if (!trimmedName) {
@@ -26,19 +57,32 @@ export default function SignupPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: trimmedName } },
-    });
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: trimmedName } },
+      });
 
-    if (error) {
-      setError(error.message);
+      if (signUpError) {
+        setError(signUpError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.session) {
+        setNotice(
+          "Check your email to confirm your account, then return here to log in.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      window.location.assign("/onboarding/courses");
+    } catch {
+      setError(NETWORK_ERROR);
       setIsSubmitting(false);
-      return;
     }
-
-    window.location.href = "/onboarding/courses";
   }
 
   return (
@@ -51,7 +95,7 @@ export default function SignupPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-[color:var(--color-phosphor)] underline-offset-4 hover:underline"
+            className="font-medium text-[color:var(--color-phosphor)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[color:var(--color-phosphor)] focus-visible:outline-none"
           >
             Log in
           </Link>
@@ -59,14 +103,20 @@ export default function SignupPage() {
         </p>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4"
+        aria-busy={isSubmitting}
+        aria-describedby={error ? "signup-error" : undefined}
+      >
         <AuthField
           label="Full name"
           name="fullName"
           type="text"
           value={fullName}
-          onChange={setFullName}
+          onChange={updateFullName}
           required
+          disabled={isSubmitting}
           autoComplete="name"
           placeholder="Ada Lovelace"
         />
@@ -75,8 +125,9 @@ export default function SignupPage() {
           name="email"
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={updateEmail}
           required
+          disabled={isSubmitting}
           autoComplete="email"
           placeholder="you@university.edu"
         />
@@ -85,14 +136,16 @@ export default function SignupPage() {
           name="password"
           type="password"
           value={password}
-          onChange={setPassword}
+          onChange={updatePassword}
           required
+          disabled={isSubmitting}
           minLength={6}
           autoComplete="new-password"
           placeholder="••••••••"
           hint="min 6 chars"
         />
-        <AuthError message={error} />
+        <AuthError id="signup-error" message={error} />
+        <AuthNotice message={notice} />
         <AuthSubmit isPending={isSubmitting} loadingText="Creating account…">
           Create account
         </AuthSubmit>

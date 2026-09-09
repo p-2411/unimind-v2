@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { UnimindLogo } from "~/components/logo";
 
 type Props = {
@@ -17,8 +16,8 @@ export function AuthPane({
   footer,
 }: Props) {
   return (
-    <main className="relative flex min-h-svh items-center justify-center px-5 py-10 sm:px-10">
-      <div className="w-full max-w-[440px]">
+    <main className="relative flex min-h-svh min-w-0 items-center justify-center px-5 py-8 sm:px-10 sm:py-10">
+      <div className="w-full max-w-[440px] min-w-0">
         {/* Mobile header */}
         <div className="mb-8 flex items-center gap-2.5 lg:hidden">
           <UnimindLogo className="h-7 w-7 text-[color:var(--color-phosphor)]" />
@@ -28,10 +27,10 @@ export function AuthPane({
         </div>
 
         <div className="term-rise">
-          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[color:var(--color-fg-mute)]">
+          <div className="font-mono text-[10px] tracking-[0.28em] text-[color:var(--color-fg-mute)] uppercase">
             {eyebrow}
           </div>
-          <h1 className="mt-2 font-mono text-[36px] font-semibold leading-[1.05] tracking-tight md:text-[40px]">
+          <h1 className="mt-2 font-mono text-[34px] leading-[1.05] font-semibold tracking-tight break-words sm:text-[36px] md:text-[40px]">
             {title}
           </h1>
           {subtitle && (
@@ -54,15 +53,12 @@ export function AuthPane({
           </div>
         )}
 
-        <div className="mt-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
-          <Link
-            href="/"
-            className="transition-colors hover:text-[color:var(--color-fg)]"
-          >
-            ← Back home
-          </Link>
+        <div className="mt-10 flex justify-end font-mono text-[10px] tracking-[0.24em] text-[color:var(--color-fg-mute)] uppercase">
           <span className="inline-flex items-baseline gap-1.5">
-            <span className="h-1.5 w-1.5 translate-y-[-1px] rounded-full bg-[color:var(--color-phosphor)]" />
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 translate-y-[-1px] rounded-full bg-[color:var(--color-phosphor)]"
+            />
             ready
           </span>
         </div>

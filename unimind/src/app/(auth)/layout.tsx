@@ -1,25 +1,22 @@
+import { Suspense } from "react";
 import { UnimindLogo } from "~/components/logo";
 import { SocialProofTicker } from "~/components/social-proof-ticker";
-import {
-  HARDCODED_USER_COUNT,
-  SOCIAL_PROOF_THRESHOLD,
-} from "~/lib/social-proof";
+import { shouldShowSocialProof } from "~/lib/social-proof";
+import { api } from "~/trpc/server";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const showSocialProof = HARDCODED_USER_COUNT >= SOCIAL_PROOF_THRESHOLD;
-
   return (
-    <div className="relative min-h-svh bg-[color:var(--color-void)] text-[color:var(--color-fg)]">
+    <div className="relative min-h-svh overflow-x-hidden bg-[color:var(--color-void)] text-[color:var(--color-fg)]">
       <div
         aria-hidden
         className="term-scan pointer-events-none absolute inset-x-0 top-0 h-px origin-left bg-[color:var(--color-phosphor)]/40"
       />
 
-      <div className="relative grid min-h-svh grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)]">
+      <div className="relative grid min-h-svh min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)]">
         {/* Decorative pane — persists across auth route changes */}
         <aside className="relative hidden overflow-hidden border-r border-[color:var(--color-rule)] lg:block">
           <div
@@ -46,7 +43,7 @@ export default function AuthLayout({
             </div>
 
             <div className="term-rise" style={{ animationDelay: "120ms" }}>
-              <h2 className="max-w-sm font-mono text-[32px] font-semibold leading-[1.05] tracking-tight">
+              <h2 className="max-w-sm font-mono text-[32px] leading-[1.05] font-semibold tracking-tight">
                 Practice like the
                 <br />
                 best{" "}
@@ -58,11 +55,9 @@ export default function AuthLayout({
                 Topic-weighted question sets, spaced recall, and a streak that
                 keeps you honest.
               </p>
-              {showSocialProof && (
-                <div className="mt-6">
-                  <SocialProofTicker initialCount={HARDCODED_USER_COUNT} />
-                </div>
-              )}
+              <Suspense fallback={null}>
+                <SocialProof />
+              </Suspense>
             </div>
 
             <div
@@ -89,6 +84,21 @@ export default function AuthLayout({
       </div>
     </div>
   );
+}
+
+async function SocialProof() {
+  try {
+    const { count } = await api.user.count();
+    if (!shouldShowSocialProof(count)) return null;
+
+    return (
+      <div className="mt-6">
+        <SocialProofTicker count={count} />
+      </div>
+    );
+  } catch {
+    return null;
+  }
 }
 
 function BootLine({

@@ -9,8 +9,10 @@ export default async function OnboardingCoursesPage() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  if (authError) throw authError;
   if (!user) redirect("/login");
 
   const enrollmentCount = await db.userCourse.count({
@@ -24,7 +26,7 @@ export default async function OnboardingCoursesPage() {
     <AuthPane
       eyebrow="Step 2 of 2"
       title="Pick your courses."
-      subtitle="We'll seed your question set from these. You can change them later."
+      subtitle="We'll seed your question set from your selection."
     >
       <CoursePicker courses={courses} />
     </AuthPane>

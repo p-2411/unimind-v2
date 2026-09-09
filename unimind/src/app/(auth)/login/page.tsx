@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useSupabase } from "~/components/providers/supabase-provider";
-import { AuthPane } from "~/components/auth-pane";
 import { AuthError, AuthField, AuthSubmit } from "~/components/auth-form";
+import { AuthPane } from "~/components/auth-pane";
+import { useSupabase } from "~/components/providers/supabase-provider";
+
+const NETWORK_ERROR =
+  "Unable to reach the login service. Check your connection and try again.";
 
 export default function LoginPage() {
   const { supabase } = useSupabase();
@@ -13,20 +16,40 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  function updateEmail(value: string) {
+    setEmail(value);
+    setError(null);
+  }
+
+  function updatePassword(value: string) {
+    setPassword(value);
+    setError(null);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message);
+      if (signInError) {
+        setError(signInError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      window.location.assign("/");
+    } catch {
+      setError(NETWORK_ERROR);
       setIsSubmitting(false);
-      return;
     }
-
-    window.location.href = "/";
   }
 
   return (
@@ -39,7 +62,7 @@ export default function LoginPage() {
           No account yet?{" "}
           <Link
             href="/signup"
-            className="font-medium text-[color:var(--color-phosphor)] underline-offset-4 hover:underline"
+            className="font-medium text-[color:var(--color-phosphor)] underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-[color:var(--color-phosphor)] focus-visible:outline-none"
           >
             Create one
           </Link>
@@ -47,14 +70,20 @@ export default function LoginPage() {
         </p>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4"
+        aria-busy={isSubmitting}
+        aria-describedby={error ? "login-error" : undefined}
+      >
         <AuthField
           label="Email"
           name="email"
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={updateEmail}
           required
+          disabled={isSubmitting}
           autoComplete="email"
           placeholder="you@university.edu"
         />
@@ -63,12 +92,13 @@ export default function LoginPage() {
           name="password"
           type="password"
           value={password}
-          onChange={setPassword}
+          onChange={updatePassword}
           required
+          disabled={isSubmitting}
           autoComplete="current-password"
           placeholder="••••••••"
         />
-        <AuthError message={error} />
+        <AuthError id="login-error" message={error} />
         <AuthSubmit isPending={isSubmitting} loadingText="Logging in…">
           Log in
         </AuthSubmit>
