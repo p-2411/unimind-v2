@@ -55,9 +55,11 @@ export function AchievementsGrid({ data }: { data: Data }) {
         {CATEGORIES.map((c) => (
           <button
             key={c}
+            type="button"
+            aria-pressed={category === c}
             onClick={() => setCategory(c)}
             className={
-              "font-mono text-[11px] uppercase tracking-[0.18em] px-3 py-1.5 border " +
+              "min-h-9 font-mono text-[11px] uppercase tracking-[0.18em] px-3 py-1.5 border " +
               (category === c
                 ? "border-[color:var(--color-cyan)] text-[color:var(--color-cyan)]"
                 : "border-[color:var(--color-rule)] text-[color:var(--color-fg-mute)] hover:text-[color:var(--color-fg)]")
@@ -66,7 +68,7 @@ export function AchievementsGrid({ data }: { data: Data }) {
             {c}
           </button>
         ))}
-        <label className="ml-auto inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-fg-mute)]">
+        <label className="inline-flex min-h-9 w-full items-center gap-2 sm:ml-auto sm:w-auto font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-fg-mute)]">
           <input
             type="checkbox"
             checked={lockedOnly}
@@ -76,7 +78,8 @@ export function AchievementsGrid({ data }: { data: Data }) {
         </label>
       </div>
 
-      <section className="mt-4 grid grid-cols-1 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 lg:grid-cols-3">
+      <p role="status" className="sr-only">{tiles.length} achievements match the selected filters.</p>
+      <section aria-label="Achievements" className="mt-4 grid grid-cols-1 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => {
           const pct = t.progress === null ? null : Math.round(t.progress * 100);
           return (
@@ -87,7 +90,7 @@ export function AchievementsGrid({ data }: { data: Data }) {
                 (t.kind === "locked" ? "opacity-75" : "")
               }
             >
-              <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em]">
+              <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.22em]">
                 <span className="text-[color:var(--color-fg-mute)]">
                   {t.achievement.category} · tier {t.achievement.tier}
                 </span>
@@ -116,7 +119,7 @@ export function AchievementsGrid({ data }: { data: Data }) {
                 +{t.achievement.xpReward} XP
               </div>
               {t.kind === "locked" && pct !== null && (
-                <div className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
+                <div role="progressbar" aria-label={`${t.achievement.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
                   <div
                     className="h-full bg-[color:var(--color-cyan)]"
                     style={{ width: `${pct}%` }}

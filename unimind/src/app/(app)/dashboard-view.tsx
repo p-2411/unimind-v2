@@ -50,7 +50,7 @@ export async function DashboardView() {
       icon: null,
     },
     {
-      label: "Accuracy",
+      label: "Mastery",
       value: calibrating ? "—" : `${stats.accuracy}%`,
       delta: calibrating
         ? `Calibrating ${stats.totalAnswers}/${stats.calibrationThreshold}`
@@ -133,7 +133,7 @@ export async function DashboardView() {
                 {s.delta}
               </div>
               {"bar" in s && s.bar && (
-                <div className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
+                <div role="progressbar" aria-label="Progress to next level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={s.bar.pct} className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
                   <div
                     className="h-full"
                     style={{ width: `${s.bar.pct}%`, background: s.bar.color }}
@@ -145,7 +145,7 @@ export async function DashboardView() {
         </section>
 
         <section className="mt-8 grid grid-cols-12 gap-4">
-          <div className="col-span-12 lg:col-span-8">
+          <div className={`col-span-12 ${percentile ? "lg:col-span-8" : ""}`}>
             <SectionHead title="Achievements" hint="recent & next" />
             <div className="mt-3 grid grid-cols-1 gap-px border border-[color:var(--color-rule)] bg-[color:var(--color-rule)] sm:grid-cols-2 lg:grid-cols-3">
               {stats.recentEarned.map((e) => (
@@ -180,7 +180,7 @@ export async function DashboardView() {
                     <div className="mt-0.5 font-sans text-[11.5px] text-[color:var(--color-fg-mute)]">
                       {x.achievement.description}
                     </div>
-                    <div className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
+                    <div role="progressbar" aria-label={`${x.achievement.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-2 h-1 w-full overflow-hidden bg-[color:var(--color-rule-hi)]">
                       <div
                         className="h-full bg-[color:var(--color-cyan)]"
                         style={{ width: `${pct}%` }}
@@ -205,30 +205,24 @@ export async function DashboardView() {
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-4">
-            <SectionHead title="Standing" />
-            <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
-              {percentile ? (
-                <>
-                  <div className="font-mono text-[28px] tabular-nums text-[color:var(--color-cyan)]">
-                    Top {100 - percentile.percentile}%
-                  </div>
-                  <div className="mt-1 font-sans text-[12px] text-[color:var(--color-fg-mute)]">
-                    More answers this week than {percentile.percentile}% of {percentile.cohortSize} active users.
-                  </div>
-                </>
-              ) : (
-                <div className="font-sans text-[12px] text-[color:var(--color-fg-mute)]">
-                  Percentile appears once at least 20 users practise in a week.
+          {percentile && (
+            <div className="col-span-12 lg:col-span-4">
+              <SectionHead title="Standing" hint="last 7 days" />
+              <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)] p-5">
+                <div className="font-mono text-[28px] tabular-nums text-[color:var(--color-cyan)]">
+                  {percentile.percentile}%
                 </div>
-              )}
+                <p className="mt-1 font-sans text-[12px] text-[color:var(--color-fg-mute)]">
+                  You answered at least as many questions as approximately {percentile.percentile}% of {percentile.cohortSize} active users in the last 7 days. Includes ties.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         <section className="mt-8 grid grid-cols-12 gap-4">
           <div className="col-span-12 min-w-0 lg:col-span-5">
-            <SectionHead title="Topic Mastery" hint="30 days" />
+            <SectionHead title="Topic Mastery" />
             <div className="mt-3 border border-[color:var(--color-rule)] bg-[color:var(--color-panel)]">
               {stats.topicMastery.length === 0 ? (
                 <div className="p-6 text-center font-sans text-[13px] text-[color:var(--color-fg-mute)]">
@@ -278,13 +272,7 @@ export async function DashboardView() {
           <div className="col-span-12 min-w-0 lg:col-span-7">
             <SectionHead title="First Up" />
             <div className="mt-3">
-              {nextQuestion ? (
-                <PreviewQuestion question={nextQuestion} />
-              ) : (
-                <div className="border border-dashed border-[color:var(--color-rule-hi)] bg-[color:var(--color-panel)]/50 p-10 text-center font-sans text-[13px] text-[color:var(--color-fg-soft)]">
-                  No questions available yet.
-                </div>
-              )}
+              <PreviewQuestion question={nextQuestion} />
             </div>
           </div>
         </section>
