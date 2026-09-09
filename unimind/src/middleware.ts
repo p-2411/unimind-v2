@@ -4,6 +4,9 @@ import { env } from "~/env";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
+  // Headers @supabase/ssr asks us to set alongside refreshed auth cookies
+  // (cache-control etc.). Kept separately so redirects can carry them too.
+  let authHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -13,7 +16,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
@@ -21,10 +24,23 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );
+          authHeaders = headers ?? {};
+          Object.entries(authHeaders).forEach(([k, v]) =>
+            response.headers.set(k, v),
+          );
         },
       },
     },
   );
+
+  // A redirect must carry any cookies refreshed above, otherwise the consumed
+  // refresh token is lost and the client ends up in a logout/redirect loop.
+  function redirectWithCookies(url: URL) {
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    Object.entries(authHeaders).forEach(([k, v]) => redirect.headers.set(k, v));
+    return redirect;
+  }
 
   // IMPORTANT: Do not place any code between createServerClient and getClaims().
   const { data } = await supabase.auth.getClaims();
@@ -42,13 +58,13 @@ export async function middleware(request: NextRequest) {
   if (!user && !isAuthPage && !isAuthApi && !isApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url);
   }
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url);
   }
 
   return response;
