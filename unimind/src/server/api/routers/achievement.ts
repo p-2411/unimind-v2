@@ -1,6 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
-  evaluateAchievement,
   getAchievementProgress,
   type AchievementContext,
 } from "~/server/lib/gamification";
