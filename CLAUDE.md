@@ -17,8 +17,10 @@ Run all commands from `unimind/` unless stated otherwise.
 - `npm run lint` / `npm run typecheck` — ESLint / `tsc --noEmit`
 - `npm run db:generate` — `prisma migrate dev` (creates migration + regenerates client)
 - `npm run db:push` — push schema without migration (dev only)
-- `npm run db:seed` — run `prisma/seed.ts`
+- `npm run db:seed` — run `prisma/seed.ts`. **Destructive, dev-only**: wipes every table (including users) before loading fixtures.
+- `npm run db:seed:achievements` — idempotent upsert of the achievement catalog only; safe on any database. Run after `db:migrate` on every environment.
 - `npm run db:studio`
+- `npm test` — pure unit tests (jest). `TEST_DATABASE_URL=postgresql://… npm run test:integration` — DB-backed tests (`*.int.test.ts`) against a throwaway, migrated Postgres (local `initdb`/`pg_ctl` works; never point this at a real database).
 
 Package manager is **npm**, not pnpm. Prisma client is generated to `unimind/generated/prisma/` (non-standard path — import from there, not `@prisma/client`).
 
@@ -79,7 +81,7 @@ Do **not** switch back to port `6543` without first refactoring `question.answer
 
 ## Deployment
 
-Vercel project `unimind-revamped`, root directory `unimind/`. `postinstall` runs `prisma generate`. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `DIRECT_URL`. Apply schema changes with `npm run db:migrate` (`prisma migrate deploy`) against the target DB before deploying code that depends on them; `next build` fails on ESLint errors, so run `npm run lint` first.
+Vercel project `unimind-revamped`, root directory `unimind/`. `postinstall` runs `prisma generate`. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `DIRECT_URL`. Release order: `npm run db:migrate` (`prisma migrate deploy`) → `npm run db:seed:achievements` → deploy code. Never run `npm run db:seed` against a database with real users. `next build` fails on ESLint errors, so run `npm run lint` first.
 
 ## Workflow conventions
 
