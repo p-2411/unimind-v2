@@ -28,8 +28,9 @@ model User {
   assessments Assessment[]
   stats       UserStats?
   topics      UserTopic[]
-  questions   UserQuestion[]
-  attempts    QuestionAttempt[]
+  questions      UserQuestion[]
+  attempts       QuestionAttempt[]
+  answerReceipts QuestionAnswerReceipt[]
 
   achievements UserAchievement[]
   events       AnalyticsEvent[]
@@ -187,6 +188,22 @@ model QuestionAttempt {
   @@index([userId, answeredAt])
   @@index([userId, topicId, answeredAt])
   @@map("question_attempts")
+}
+
+model QuestionAnswerReceipt {
+  id                 String   @id @default(cuid())
+  userId             String   @db.Uuid
+  attemptId          String   @db.Uuid
+  payloadFingerprint String
+  requestPayload     Json
+  responsePayload    String   @db.Text
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, attemptId])
+  @@index([userId, createdAt])
+  @@map("question_answer_receipts")
 }
 
 // ============================================

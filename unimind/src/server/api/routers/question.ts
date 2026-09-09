@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
+
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import superjson from "superjson";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { type Card, type Grade } from "ts-fsrs";
@@ -20,6 +23,74 @@ import {
   type AnalyticsEventInput,
 } from "~/server/lib/gamification";
 import { lockUser } from "~/server/lib/user-lock";
+
+const answerRequestSchema = z.object({
+  questionId: z.string(),
+  choiceIndex: z.number().int().min(0),
+  rating: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  source: z.enum(["paywall", "in_app"]),
+  timeSpentMs: z.number().int().min(0).max(2_147_483_647).default(0),
+});
+
+const answerInputSchema = answerRequestSchema.extend({
+  attemptId: z.string().uuid(),
+});
+
+const earnedAchievementSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  xpReward: z.number().int(),
+});
+
+const answerResponseSchema = z.object({
+  isCorrect: z.boolean(),
+  answerIndex: z.number().int(),
+  explanation: z.string().nullable(),
+  userTopic: z.object({
+    id: z.string(),
+    topicName: z.string(),
+    userId: z.string().uuid(),
+    topicId: z.string(),
+    masteryScore: z.number(),
+    masteryUpdatedAt: z.date(),
+    correctCount: z.number().int(),
+    totalCount: z.number().int(),
+    lastAnsweredAt: z.date().nullable(),
+    updatedAt: z.date(),
+  }),
+  nextDue: z.date(),
+  xpDelta: z.number().int(),
+  newXp: z.number().int(),
+  newLevel: z.number().int(),
+  leveledUp: z.boolean(),
+  streakExtended: z.boolean(),
+  streakLost: z.boolean(),
+  currentStreak: z.number().int(),
+  longestStreak: z.number().int(),
+  newlyEarnedCodes: z.array(z.string()),
+  newlyEarned: z.array(earnedAchievementSchema),
+});
+
+type AnswerRequest = z.infer<typeof answerRequestSchema>;
+type AnswerResponse = z.infer<typeof answerResponseSchema>;
+
+function toAnswerRequest(input: z.infer<typeof answerInputSchema>): AnswerRequest {
+  return {
+    questionId: input.questionId,
+    choiceIndex: input.choiceIndex,
+    rating: input.rating,
+    source: input.source,
+    timeSpentMs: input.timeSpentMs,
+  };
+}
+
+function fingerprintAnswerRequest(input: AnswerRequest): string {
+  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
+}
+
+function deserializeAnswerResponse(payload: string): AnswerResponse {
+  return answerResponseSchema.parse(superjson.parse<unknown>(payload));
+}
 
 export const questionRouter = createTRPCRouter({
   list: protectedProcedure
@@ -111,61 +182,92 @@ export const questionRouter = createTRPCRouter({
   }),
 
   answer: protectedProcedure
-    .input(
-      z.object({
-        questionId: z.string(),
-        choiceIndex: z.number().int().min(0),
-        rating: z.union([
-          z.literal(1),
-          z.literal(2),
-          z.literal(3),
-          z.literal(4),
-        ]),
-        source: z.enum(["paywall", "in_app"]),
-        timeSpentMs: z.number().int().min(0).default(0),
-      }),
-    )
+    .input(answerInputSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+      const answerRequest = toAnswerRequest(input);
+      const requestJson = JSON.stringify(answerRequest);
+      const payloadFingerprint = fingerprintAnswerRequest(answerRequest);
 
-      const question = await ctx.db.question.findUnique({
-        where: { id: input.questionId },
-        select: {
-          id: true,
-          topicId: true,
-          answerIndex: true,
-          explanation: true,
-          difficulty: true,
-          topic: { select: { name: true, courseId: true } },
-        },
-      });
-      if (!question) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
-      }
-
-      const isCorrect = input.choiceIndex === question.answerIndex;
-      const now = new Date();
-      const today = new Date(now);
-      today.setUTCHours(0, 0, 0, 0);
-
-      // Static catalog — pre-fetch outside the transaction so the unlock
-      // loop avoids N serial round-trips over the remote pooler.
-      const achievementCatalog = await ctx.db.achievement.findMany({
-        where: { code: { in: [...ALL_ACHIEVEMENT_CODES] } },
-        select: { id: true, code: true, name: true, xpReward: true },
-      });
-      const catalogByCode = new Map(
-        achievementCatalog.map((a) => [
-          a.code,
-          { id: a.id, name: a.name, xpReward: a.xpReward },
-        ]),
-      );
-
-      const result = await ctx.db.$transaction(async (tx) => {
+      const transactionResult = await ctx.db.$transaction(async (tx) => {
         // Serialise this user's answer transactions: XP/level/streak and
         // achievement unlocks are read-then-write, so concurrent answers would
         // clobber each other or double-insert achievements (P2002).
         await lockUser(tx, userId);
+
+        const receipt = await tx.questionAnswerReceipt.findUnique({
+          where: {
+            userId_attemptId: { userId, attemptId: input.attemptId },
+          },
+          select: {
+            payloadFingerprint: true,
+            requestPayload: true,
+            responsePayload: true,
+          },
+        });
+        if (receipt) {
+          const storedRequest = answerRequestSchema.safeParse(
+            receipt.requestPayload,
+          );
+          const samePayload =
+            receipt.payloadFingerprint === payloadFingerprint &&
+            storedRequest.success &&
+            JSON.stringify(storedRequest.data) === requestJson;
+          if (!samePayload) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message:
+                "attemptId has already been used with a different answer payload",
+            });
+          }
+          return {
+            kind: "replay" as const,
+            response: deserializeAnswerResponse(receipt.responsePayload),
+          };
+        }
+
+        // clock_timestamp(), unlike transaction_timestamp(), is evaluated
+        // after the lock wait. This keeps scheduler/mastery timestamps ordered
+        // by actual per-user processing order rather than request arrival.
+        const [clock] = await tx.$queryRaw<Array<{ now: Date }>>`
+          SELECT clock_timestamp() AS now
+        `;
+        if (!clock) throw new Error("Database clock query returned no row");
+        const now = clock.now;
+        const today = new Date(now);
+        today.setUTCHours(0, 0, 0, 0);
+
+        const question = await tx.question.findUnique({
+          where: { id: input.questionId },
+          select: {
+            id: true,
+            topicId: true,
+            choices: true,
+            answerIndex: true,
+            explanation: true,
+            difficulty: true,
+            topic: { select: { name: true, courseId: true } },
+          },
+        });
+        if (!question) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+        }
+
+        const isCorrect = input.choiceIndex === question.answerIndex;
+        const achievementCatalog = await tx.achievement.findMany({
+          where: { code: { in: [...ALL_ACHIEVEMENT_CODES] } },
+          select: { id: true, code: true, name: true, xpReward: true },
+        });
+        const catalogByCode = new Map(
+          achievementCatalog.map((achievement) => [
+            achievement.code,
+            {
+              id: achievement.id,
+              name: achievement.name,
+              xpReward: achievement.xpReward,
+            },
+          ]),
+        );
 
         // Enrollment check runs under the lock so a concurrent unenroll (which
         // takes the same lock) cannot slip between the check and the writes
@@ -180,6 +282,13 @@ export const questionRouter = createTRPCRouter({
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Question is not in one of your enrolled courses",
+          });
+        }
+
+        if (input.choiceIndex >= question.choices.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "choiceIndex must identify an available choice",
           });
         }
 
@@ -410,7 +519,10 @@ export const questionRouter = createTRPCRouter({
           });
         }
 
-        return {
+        const response = answerResponseSchema.parse({
+          isCorrect,
+          answerIndex: question.answerIndex,
+          explanation: question.explanation,
           userTopic,
           nextDue: card.due,
           xpDelta: xpDelta + bonusXp,
@@ -423,6 +535,22 @@ export const questionRouter = createTRPCRouter({
           longestStreak: streak.longestStreak,
           newlyEarnedCodes,
           newlyEarned,
+        });
+
+        await tx.questionAnswerReceipt.create({
+          data: {
+            userId,
+            attemptId: input.attemptId,
+            payloadFingerprint,
+            requestPayload: answerRequest,
+            responsePayload: superjson.stringify(response),
+          },
+        });
+
+        return {
+          kind: "initial" as const,
+          response,
+          difficulty: question.difficulty,
         };
       }, {
         // Remote pooler adds latency; default 5000ms is tight for this mutation.
@@ -430,43 +558,47 @@ export const questionRouter = createTRPCRouter({
         timeout: 15_000,
       });
 
-      // Best-effort analytics: one batched, awaited write. It never throws, and
-      // awaiting it matters on serverless (fire-and-forget writes are dropped
-      // when the function is frozen after the response).
+      if (transactionResult.kind === "replay") {
+        return transactionResult.response;
+      }
+
+      const { response } = transactionResult;
+      // Best-effort analytics are emitted only by the transaction that first
+      // commits the receipt. Replays return before reaching this write.
       const analyticsEvents: AnalyticsEventInput[] = [
         {
           userId,
           eventType: ANALYTICS_EVENTS.PAYWALL_ANSWERED,
           payload: {
-            isCorrect,
-            difficulty: question.difficulty,
-            xpGranted: result.xpDelta,
+            isCorrect: response.isCorrect,
+            difficulty: transactionResult.difficulty,
+            xpGranted: response.xpDelta,
             source: input.source,
           },
         },
       ];
-      if (result.streakExtended) {
+      if (response.streakExtended) {
         analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.STREAK_EXTENDED,
-          payload: { length: result.currentStreak },
+          payload: { length: response.currentStreak },
         });
       }
-      if (result.streakLost) {
+      if (response.streakLost) {
         analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.STREAK_LOST,
-          payload: { priorLongest: result.longestStreak },
+          payload: { priorLongest: response.longestStreak },
         });
       }
-      if (result.leveledUp) {
+      if (response.leveledUp) {
         analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.LEVEL_UP,
-          payload: { toLevel: result.newLevel },
+          payload: { toLevel: response.newLevel },
         });
       }
-      for (const code of result.newlyEarnedCodes) {
+      for (const code of response.newlyEarnedCodes) {
         analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.ACHIEVEMENT_EARNED,
@@ -475,22 +607,6 @@ export const questionRouter = createTRPCRouter({
       }
       await logAnalyticsEvents(ctx.db, analyticsEvents);
 
-      return {
-        isCorrect,
-        answerIndex: question.answerIndex,
-        explanation: question.explanation,
-        userTopic: result.userTopic,
-        nextDue: result.nextDue,
-        xpDelta: result.xpDelta,
-        newXp: result.newXp,
-        newLevel: result.newLevel,
-        leveledUp: result.leveledUp,
-        streakExtended: result.streakExtended,
-        streakLost: result.streakLost,
-        currentStreak: result.currentStreak,
-        longestStreak: result.longestStreak,
-        newlyEarnedCodes: result.newlyEarnedCodes,
-        newlyEarned: result.newlyEarned,
-      };
+      return response;
     }),
 });
