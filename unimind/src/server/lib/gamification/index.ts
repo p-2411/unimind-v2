@@ -14,4 +14,9 @@ export {
   type AchievementContext,
 } from "./achievements";
 
-export { logAnalyticsEvent, ANALYTICS_EVENTS } from "./analytics";
+export {
+  logAnalyticsEvent,
+  logAnalyticsEvents,
+  ANALYTICS_EVENTS,
+  type AnalyticsEventInput,
+} from "./analytics";
