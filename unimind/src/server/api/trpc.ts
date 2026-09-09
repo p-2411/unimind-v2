@@ -35,23 +35,21 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   let session: { user: { id: string; email: string } } | null = null;
 
   if (user) {
-    const existing = await db.user.findUnique({
+    const rawFullName: unknown = user.user_metadata?.full_name;
+    const fullName =
+      typeof rawFullName === "string" ? rawFullName.trim() || null : null;
+    // Lazily create the profile row. `update: {}` is intentional: an existing
+    // row's name/email must never be overwritten, and upsert is race-safe
+    // under concurrent first requests (no P2002 from find-then-create).
+    await db.user.upsert({
       where: { id: user.id },
-      select: { id: true },
+      create: {
+        id: user.id,
+        email: user.email ?? "",
+        name: fullName,
+      },
+      update: {},
     });
-    if (!existing) {
-      const fullName =
-        typeof user.user_metadata?.full_name === "string"
-          ? (user.user_metadata.full_name as string).trim() || null
-          : null;
-      await db.user.create({
-        data: {
-          id: user.id,
-          email: user.email ?? "",
-          name: fullName,
-        },
-      });
-    }
     session = { user: { id: user.id, email: user.email ?? "" } };
   }
 
