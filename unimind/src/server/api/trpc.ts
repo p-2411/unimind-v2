@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 
 import { db } from "~/server/db";
 import { createSupabaseServerClient } from "~/lib/supabase/server";
+import { ensureUserProfile } from "~/server/auth/profile";
 
 /**
  * 1. CONTEXT
@@ -38,17 +39,13 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     const rawFullName: unknown = user.user_metadata?.full_name;
     const fullName =
       typeof rawFullName === "string" ? rawFullName.trim() || null : null;
-    // Lazily create the profile row. `update: {}` is intentional: an existing
-    // row's name/email must never be overwritten, and upsert is race-safe
-    // under concurrent first requests (no P2002 from find-then-create).
-    await db.user.upsert({
-      where: { id: user.id },
-      create: {
-        id: user.id,
-        email: user.email ?? "",
-        name: fullName,
-      },
-      update: {},
+    // Lazily create the profile row (insert-if-absent; never overwrites an
+    // existing row's name/email). See ensureUserProfile for why this is not
+    // an upsert.
+    await ensureUserProfile(db, {
+      id: user.id,
+      email: user.email ?? "",
+      name: fullName,
     });
     session = { user: { id: user.id, email: user.email ?? "" } };
   }
