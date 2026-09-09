@@ -15,8 +15,9 @@ import {
   evaluateAchievement,
   ALL_ACHIEVEMENT_CODES,
   type AchievementContext,
-  logAnalyticsEvent,
+  logAnalyticsEvents,
   ANALYTICS_EVENTS,
+  type AnalyticsEventInput,
 } from "~/server/lib/gamification";
 
 export const questionRouter = createTRPCRouter({
@@ -134,11 +135,26 @@ export const questionRouter = createTRPCRouter({
           answerIndex: true,
           explanation: true,
           difficulty: true,
-          topic: { select: { name: true } },
+          topic: {
+            select: {
+              name: true,
+              course: {
+                select: {
+                  userCourses: { where: { userId }, select: { userId: true } },
+                },
+              },
+            },
+          },
         },
       });
       if (!question) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+      }
+      if (question.topic.course.userCourses.length === 0) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Question is not in one of your enrolled courses",
+        });
       }
 
       const isCorrect = input.choiceIndex === question.answerIndex;
@@ -150,13 +166,22 @@ export const questionRouter = createTRPCRouter({
       // loop avoids N serial round-trips over the remote pooler.
       const achievementCatalog = await ctx.db.achievement.findMany({
         where: { code: { in: [...ALL_ACHIEVEMENT_CODES] } },
-        select: { id: true, code: true, xpReward: true },
+        select: { id: true, code: true, name: true, xpReward: true },
       });
       const catalogByCode = new Map(
-        achievementCatalog.map((a) => [a.code, { id: a.id, xpReward: a.xpReward }]),
+        achievementCatalog.map((a) => [
+          a.code,
+          { id: a.id, name: a.name, xpReward: a.xpReward },
+        ]),
       );
 
       const result = await ctx.db.$transaction(async (tx) => {
+        // Serialise this user's answer transactions: XP/level/streak and
+        // achievement unlocks are read-then-write, so concurrent answers would
+        // clobber each other or double-insert achievements (P2002). The lock
+        // is transaction-scoped and released automatically on commit/rollback.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+
         // 1. Load existing UserQuestion (or null = unseen).
         const existingUq = await tx.userQuestion.findUnique({
           where: { userId_questionId: { userId, questionId: question.id } },
@@ -360,7 +385,7 @@ export const questionRouter = createTRPCRouter({
         };
 
         const earnedCodes = new Set(alreadyEarned.map((r) => r.achievement.code));
-        const newlyEarnedCodes: string[] = [];
+        const newlyEarned: Array<{ code: string; name: string; xpReward: number }> = [];
         let bonusXp = 0;
 
         for (const code of ALL_ACHIEVEMENT_CODES) {
@@ -371,9 +396,10 @@ export const questionRouter = createTRPCRouter({
           await tx.userAchievement.create({
             data: { userId, achievementId: row.id },
           });
-          newlyEarnedCodes.push(code);
+          newlyEarned.push({ code, name: row.name, xpReward: row.xpReward });
           bonusXp += row.xpReward;
         }
+        const newlyEarnedCodes = newlyEarned.map((a) => a.code);
 
         let finalXp = newXp;
         let finalLevel = newLevel;
@@ -400,6 +426,7 @@ export const questionRouter = createTRPCRouter({
           currentStreak: streak.currentStreak,
           longestStreak: streak.longestStreak,
           newlyEarnedCodes,
+          newlyEarned,
         };
       }, {
         // Remote pooler adds latency; default 5000ms is tight for this mutation.
@@ -407,46 +434,50 @@ export const questionRouter = createTRPCRouter({
         timeout: 15_000,
       });
 
-      // Best-effort analytics. Do not await (fire-and-forget).
-      void logAnalyticsEvent(ctx.db, {
-        userId,
-        eventType: ANALYTICS_EVENTS.PAYWALL_ANSWERED,
-        payload: {
-          isCorrect,
-          difficulty: question.difficulty,
-          xpGranted: result.xpDelta,
-          source: input.source,
+      // Best-effort analytics: one batched, awaited write. It never throws, and
+      // awaiting it matters on serverless (fire-and-forget writes are dropped
+      // when the function is frozen after the response).
+      const analyticsEvents: AnalyticsEventInput[] = [
+        {
+          userId,
+          eventType: ANALYTICS_EVENTS.PAYWALL_ANSWERED,
+          payload: {
+            isCorrect,
+            difficulty: question.difficulty,
+            xpGranted: result.xpDelta,
+            source: input.source,
+          },
         },
-      });
-
+      ];
       if (result.streakExtended) {
-        void logAnalyticsEvent(ctx.db, {
+        analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.STREAK_EXTENDED,
           payload: { length: result.currentStreak },
         });
       }
       if (result.streakLost) {
-        void logAnalyticsEvent(ctx.db, {
+        analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.STREAK_LOST,
           payload: { priorLongest: result.longestStreak },
         });
       }
       if (result.leveledUp) {
-        void logAnalyticsEvent(ctx.db, {
+        analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.LEVEL_UP,
           payload: { toLevel: result.newLevel },
         });
       }
       for (const code of result.newlyEarnedCodes) {
-        void logAnalyticsEvent(ctx.db, {
+        analyticsEvents.push({
           userId,
           eventType: ANALYTICS_EVENTS.ACHIEVEMENT_EARNED,
           payload: { code },
         });
       }
+      await logAnalyticsEvents(ctx.db, analyticsEvents);
 
       return {
         isCorrect,
@@ -463,6 +494,7 @@ export const questionRouter = createTRPCRouter({
         currentStreak: result.currentStreak,
         longestStreak: result.longestStreak,
         newlyEarnedCodes: result.newlyEarnedCodes,
+        newlyEarned: result.newlyEarned,
       };
     }),
 });
