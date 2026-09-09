@@ -2,14 +2,9 @@
 
 import { type User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "~/lib/supabase/browser";
+import { subscribeToAuthState } from "./supabase-auth-state";
 
 type SupabaseContextValue = {
   supabase: ReturnType<typeof createSupabaseBrowserClient>;
@@ -24,22 +19,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    void supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      setIsLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        if (event !== "INITIAL_SESSION") router.refresh();
-      },
-    );
-
-    return () => listener.subscription.unsubscribe();
-  }, [supabase, router]);
+  useEffect(
+    () =>
+      subscribeToAuthState(
+        supabase.auth,
+        setUser,
+        () => setIsLoading(false),
+        () => router.refresh(),
+      ),
+    [supabase, router],
+  );
 
   return (
     <SupabaseContext.Provider value={{ supabase, user, isLoading }}>
