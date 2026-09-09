@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BookOpenText,
   LayoutGrid,
@@ -36,12 +37,12 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { title: "Dashboard",    url: "/",             icon: LayoutGrid },
-  { title: "Questions",    url: "/questions",    icon: ListOrdered },
+  { title: "Dashboard", url: "/", icon: LayoutGrid },
+  { title: "Questions", url: "/questions", icon: ListOrdered },
   { title: "Achievements", url: "/achievements", icon: Trophy },
-  { title: "Topics",       url: "/topics",       icon: BookOpenText, soon: true },
-  { title: "Progress",     url: "/progress",     icon: TrendingUp,   soon: true },
-  { title: "Settings",     url: "/settings",     icon: Settings,     soon: true },
+  { title: "Topics", url: "/topics", icon: BookOpenText, soon: true },
+  { title: "Progress", url: "/progress", icon: TrendingUp, soon: true },
+  { title: "Settings", url: "/settings", icon: Settings, soon: true },
 ];
 
 export function AppSidebar() {
@@ -66,7 +67,7 @@ export function AppSidebar() {
 
       <SidebarContent className="pt-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="font-mono text-[10px] uppercase tracking-[0.24em] text-[color:var(--color-fg-mute)]">
+          <SidebarGroupLabel className="font-mono text-[10px] tracking-[0.24em] text-[color:var(--color-fg-mute)] uppercase">
             Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -84,7 +85,7 @@ export function AppSidebar() {
                         <span className="font-sans text-[13.5px] tracking-tight">
                           {item.title}
                         </span>
-                        <span className="ml-auto border border-[color:var(--color-rule-hi)] px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.18em] text-[color:var(--color-fg-mute)]">
+                        <span className="ml-auto border border-[color:var(--color-rule-hi)] px-1.5 py-px font-mono text-[9px] tracking-[0.18em] text-[color:var(--color-fg-mute)] uppercase">
                           soon
                         </span>
                       </SidebarMenuButton>
@@ -143,19 +144,50 @@ export function AppSidebar() {
 
 function SignOutButton() {
   const { supabase } = useSupabase();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    if (isPending) return;
+
+    setIsPending(true);
+    setError(null);
+
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        setError(signOutError.message);
+        setIsPending(false);
+        return;
+      }
+
+      window.location.assign("/login");
+    } catch {
+      setError("Unable to sign out. Check your connection and try again.");
+      setIsPending(false);
+    }
   }
 
   return (
-    <SidebarMenuButton
-      onClick={onSignOut}
-      className="h-9 rounded-none border-l-2 border-transparent pl-3 font-sans text-[13.5px] text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-red)]"
-    >
-      <LogOut className="h-4 w-4" strokeWidth={1.75} />
-      <span>Sign out</span>
-    </SidebarMenuButton>
+    <div>
+      <SidebarMenuButton
+        onClick={onSignOut}
+        disabled={isPending}
+        aria-busy={isPending}
+        className="h-9 rounded-none border-l-2 border-transparent pl-3 font-sans text-[13.5px] text-[color:var(--color-fg-soft)] hover:bg-[color:var(--color-panel)]/70 hover:text-[color:var(--color-red)] disabled:cursor-wait disabled:opacity-60"
+      >
+        <LogOut aria-hidden="true" className="h-4 w-4" strokeWidth={1.75} />
+        <span>{isPending ? "Signing out…" : "Sign out"}</span>
+      </SidebarMenuButton>
+      {error && (
+        <p
+          role="alert"
+          aria-live="assertive"
+          className="px-3 pt-1 pb-2 font-sans text-[11px] leading-snug text-[color:var(--color-red)]"
+        >
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
