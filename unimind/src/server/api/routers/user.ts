@@ -3,7 +3,8 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/
 import { readMastery } from "~/server/lib/scoring";
 import {
   getAchievementProgress,
-  type AchievementContext,
+  effectiveStreak,
+  loadAchievementContext,
 } from "~/server/lib/gamification";
 
 const CALIBRATION_THRESHOLD = 10;
@@ -39,6 +40,8 @@ export const userRouter = createTRPCRouter({
     );
 
     const now = new Date();
+    const today = new Date(now);
+    today.setUTCHours(0, 0, 0, 0);
     let totalAnswers = 0;
     let scoreSum = 0;
     let topicsCoveredThisWeek = 0;
@@ -77,7 +80,7 @@ export const userRouter = createTRPCRouter({
       .sort((a, b) => b.score - a.score)
       .slice(0, 6);
 
-    const [allAchievements, allEarnedRows, distinctCoursesCount] = await Promise.all([
+    const [allAchievements, allEarnedRows, snapshot] = await Promise.all([
       ctx.db.achievement.findMany({
         orderBy: [{ category: "asc" }, { tier: "asc" }, { code: "asc" }],
       }),
@@ -90,25 +93,10 @@ export const userRouter = createTRPCRouter({
           },
         },
       }),
-      ctx.db.userCourse.count({ where: { userId } }),
+      loadAchievementContext(ctx.db, userId, { now, stats: userStats }),
     ]);
 
     const earnedIdSet = new Set(allEarnedRows.map((r) => r.achievementId));
-
-    const snapshot: AchievementContext = {
-      currentStreak: userStats?.currentStreak ?? 0,
-      longestStreak: userStats?.longestStreak ?? 0,
-      totalCorrectAnswers: userStats?.totalCorrectAnswers ?? 0,
-      totalQuestionsAnswered: userStats?.totalQuestionsAnswered ?? 0,
-      level: userStats?.level ?? 1,
-      topicsWithMastery70: userTopics.filter((t) => t.masteryScore >= 70).length,
-      topicsWithMastery85: userTopics.filter((t) => t.masteryScore >= 85).length,
-      distinctTopicsPracticed: userTopics.length,
-      distinctCoursesPracticed: distinctCoursesCount,
-      justAnsweredDifficulty: 0,
-      justAnsweredCorrectly: false,
-      hasAnsweredAnyQuestion: (userStats?.totalQuestionsAnswered ?? 0) > 0,
-    };
 
     const nextClosest = allAchievements
       .filter((a) => !earnedIdSet.has(a.id))
@@ -137,7 +125,11 @@ export const userRouter = createTRPCRouter({
       topicsCoveredThisWeek,
       totalAnswers,
       accuracy,
-      currentStreak: userStats?.currentStreak ?? 0,
+      currentStreak: effectiveStreak({
+        currentStreak: userStats?.currentStreak ?? 0,
+        lastActiveDate: userStats?.lastActiveDate ?? null,
+        today,
+      }),
       longestStreak: userStats?.longestStreak ?? 0,
       level: userStats?.level ?? 1,
       xp: userStats?.xp ?? 0,

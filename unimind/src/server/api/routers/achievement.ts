@@ -1,59 +1,29 @@
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   getAchievementProgress,
-  type AchievementContext,
+  loadAchievementContext,
 } from "~/server/lib/gamification";
 
 export const achievementRouter = createTRPCRouter({
   listForUser: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    const [allAchievements, earnedRows, stats, userTopics, distinctCourses] =
-      await Promise.all([
-        ctx.db.achievement.findMany({
-          orderBy: [{ category: "asc" }, { tier: "asc" }, { code: "asc" }],
-        }),
-        ctx.db.userAchievement.findMany({
-          where: { userId },
-          select: { achievementId: true, earnedAt: true },
-        }),
-        ctx.db.userStats.findUnique({
-          where: { userId },
-          select: {
-            xp: true,
-            level: true,
-            currentStreak: true,
-            longestStreak: true,
-            totalCorrectAnswers: true,
-            totalQuestionsAnswered: true,
-          },
-        }),
-        ctx.db.userTopic.findMany({
-          where: { userId },
-          select: { masteryScore: true },
-        }),
-        ctx.db.userCourse.count({ where: { userId } }),
-      ]);
+    // Context-only predicates cannot be "close" — the snapshot's transient
+    // fields default to all-or-nothing.
+    const [allAchievements, earnedRows, snapshot] = await Promise.all([
+      ctx.db.achievement.findMany({
+        orderBy: [{ category: "asc" }, { tier: "asc" }, { code: "asc" }],
+      }),
+      ctx.db.userAchievement.findMany({
+        where: { userId },
+        select: { achievementId: true, earnedAt: true },
+      }),
+      loadAchievementContext(ctx.db, userId, { now: new Date() }),
+    ]);
 
     const earnedById = new Map(
       earnedRows.map((r) => [r.achievementId, r.earnedAt]),
     );
-
-    const snapshot: AchievementContext = {
-      currentStreak: stats?.currentStreak ?? 0,
-      longestStreak: stats?.longestStreak ?? 0,
-      totalCorrectAnswers: stats?.totalCorrectAnswers ?? 0,
-      totalQuestionsAnswered: stats?.totalQuestionsAnswered ?? 0,
-      level: stats?.level ?? 1,
-      topicsWithMastery70: userTopics.filter((t) => t.masteryScore >= 70).length,
-      topicsWithMastery85: userTopics.filter((t) => t.masteryScore >= 85).length,
-      distinctTopicsPracticed: userTopics.length,
-      distinctCoursesPracticed: distinctCourses,
-      // Context-only predicates cannot be "close" — treat as all-or-nothing.
-      justAnsweredDifficulty: 0,
-      justAnsweredCorrectly: false,
-      hasAnsweredAnyQuestion: (stats?.totalQuestionsAnswered ?? 0) > 0,
-    };
 
     const earned: Array<{
       achievement: (typeof allAchievements)[number];

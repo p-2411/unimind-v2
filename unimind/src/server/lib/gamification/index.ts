@@ -5,7 +5,12 @@ export {
   xpProgressForLevel,
 } from "./xp";
 
-export { updateStreak, type StreakInput, type StreakResult } from "./streak";
+export {
+  updateStreak,
+  effectiveStreak,
+  type StreakInput,
+  type StreakResult,
+} from "./streak";
 
 export {
   evaluateAchievement,
@@ -13,6 +18,8 @@ export {
   ALL_ACHIEVEMENT_CODES,
   type AchievementContext,
 } from "./achievements";
+
+export { loadAchievementContext, type StatsSnapshot } from "./snapshot";
 
 export {
   logAnalyticsEvent,

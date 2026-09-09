@@ -34,6 +34,26 @@ function utcDaysBetween(a: Date, b: Date): number {
   return Math.round((bUtc - aUtc) / MS_PER_DAY);
 }
 
+/**
+ * The streak as it should be displayed / evaluated right now: the stored
+ * value is only live while `lastActiveDate` is today or yesterday (UTC).
+ * Once a day has been missed the streak is already lost, even though the
+ * stored row is not rewritten until the next answer.
+ */
+export function effectiveStreak({
+  currentStreak,
+  lastActiveDate,
+  today,
+}: {
+  currentStreak: number;
+  lastActiveDate: Date | null;
+  today: Date;
+}): number {
+  if (lastActiveDate === null) return 0;
+  const gap = utcDaysBetween(lastActiveDate, today);
+  return gap <= 1 ? currentStreak : 0;
+}
+
 export function updateStreak(input: StreakInput): StreakResult {
   const { currentStreak, longestStreak, lastActiveDate, today } = input;
 

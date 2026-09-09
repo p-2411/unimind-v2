@@ -1,6 +1,32 @@
-import { updateStreak } from "./streak";
+import { effectiveStreak, updateStreak } from "./streak";
 
 const utcDay = (n: number) => new Date(Date.UTC(2026, 0, 1 + n));
+
+describe("effectiveStreak", () => {
+  it("is 0 when the user has never been active", () => {
+    expect(
+      effectiveStreak({ currentStreak: 5, lastActiveDate: null, today: utcDay(0) }),
+    ).toBe(0);
+  });
+
+  it("keeps the stored streak when last active today", () => {
+    expect(
+      effectiveStreak({ currentStreak: 5, lastActiveDate: utcDay(0), today: utcDay(0) }),
+    ).toBe(5);
+  });
+
+  it("keeps the stored streak when last active yesterday", () => {
+    expect(
+      effectiveStreak({ currentStreak: 5, lastActiveDate: utcDay(-1), today: utcDay(0) }),
+    ).toBe(5);
+  });
+
+  it("is 0 once a full day has been missed", () => {
+    expect(
+      effectiveStreak({ currentStreak: 5, lastActiveDate: utcDay(-2), today: utcDay(0) }),
+    ).toBe(0);
+  });
+});
 
 describe("updateStreak", () => {
   it("starts a new streak at 1 for a first-ever answer", () => {
