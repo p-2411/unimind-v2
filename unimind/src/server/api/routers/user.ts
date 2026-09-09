@@ -131,6 +131,7 @@ export const userRouter = createTRPCRouter({
         today,
       }),
       longestStreak: userStats?.longestStreak ?? 0,
+      lastActiveDate: userStats?.lastActiveDate ?? null,
       level: userStats?.level ?? 1,
       xp: userStats?.xp ?? 0,
       topicMastery,

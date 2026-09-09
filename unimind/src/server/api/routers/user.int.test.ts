@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   cleanup,
   createCourse,
@@ -72,6 +74,7 @@ describe("achievement.listForUser — distinctCoursesPracticed", () => {
     const q = fx.questions[0]!;
 
     await caller.question.answer({
+      attemptId: randomUUID(),
       questionId: q.id,
       choiceIndex: q.answerIndex,
       rating: 3,
