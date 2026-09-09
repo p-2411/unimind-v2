@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed:achievements": "npx tsx prisma/seed-achievements.ts",
     "dev": "next dev --turbo",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
@@ -20,6 +21,7 @@
     "preview": "next build && next start",
     "start": "next start",
     "test": "jest --passWithNoTests",
+    "test:integration": "jest --config jest.integration.config.mjs",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit"
   },

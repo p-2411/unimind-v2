@@ -1,5 +1,12 @@
+// ⚠️  DESTRUCTIVE — DEV ONLY.
+// This script DELETES ALL application data (users, enrollments, attempts,
+// stats, achievements, …) before loading dev fixtures. Never run it against a
+// database with real users. To load only the Achievement catalog safely (e.g.
+// on production), use `npm run db:seed:achievements` instead.
+
 import { PrismaClient } from "../generated/prisma";
 import initialData from "./initial_data.json";
+import { seedAchievements } from "./seed-achievements";
 
 const prisma = new PrismaClient();
 
@@ -184,30 +191,8 @@ async function main() {
 
   // Seed Achievements
   console.log("🏅 Seeding achievements...");
-  const { ACHIEVEMENTS } = await import("./achievements-seed");
-  for (const a of ACHIEVEMENTS) {
-    await prisma.achievement.upsert({
-      where: { code: a.code },
-      create: {
-        code: a.code,
-        name: a.name,
-        description: a.description,
-        category: a.category,
-        tier: a.tier,
-        xpReward: a.xpReward,
-        iconKey: a.iconKey,
-      },
-      update: {
-        name: a.name,
-        description: a.description,
-        category: a.category,
-        tier: a.tier,
-        xpReward: a.xpReward,
-        iconKey: a.iconKey,
-      },
-    });
-  }
-  console.log(`   ✓ Upserted ${ACHIEVEMENTS.length} achievements`);
+  const achievementCount = await seedAchievements(prisma);
+  console.log(`   ✓ Upserted ${achievementCount} achievements`);
 
   console.log("\n✅ Database seeded successfully!");
 }
