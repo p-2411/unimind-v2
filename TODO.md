@@ -4,14 +4,14 @@
 
 ## Database connection / scaling
 
-Currently running on a **direct** Supabase connection (port 5432). Fine for dev and pre-launch. Before launch or when concurrent users grow, revisit:
+The prior deployment used Supabase's **session pooler** (port 5432), not a direct connection. Retain that configuration for the replacement database and revisit before concurrency grows:
 
 - **Pooling strategy.** Direct connections don't scale — each Next.js request can open its own Postgres connection and exhaust the server. Options:
-  - Supabase **transaction pooler** (port 6543) with `?pgbouncer=true` on `DATABASE_URL` and direct URL kept as `DIRECT_URL` for Prisma migrations. Requires removing interactive `$transaction(async tx => …)` calls (pgbouncer transaction mode doesn't support them reliably).
+  - Supabase **transaction pooler** (port 6543), with Prisma/prepared-statement settings verified against the deployed pooler and migration URL kept separately. Transaction mode pins a backend until commit; retain atomic interactive transactions and test concurrency/rollback before switching.
   - Supabase **session pooler** — less strict, but can still exhaust under hot-reload / many Prisma clients.
   - Move to **Neon** + `@neondatabase/serverless` HTTP driver via Prisma's driver adapter. No persistent connection, no pool exhaustion, very fast cold starts. Tradeoff: no interactive transactions across requests, no LISTEN/NOTIFY.
 
-- **Audit interactive transactions.** `question.answer` currently uses `ctx.db.$transaction(async tx => …)`. If we move to a transaction-mode pooler or HTTP driver, rewrite as sequential idempotent upserts (both steps are already idempotent — the transaction mostly exists for consistency, not correctness).
+- **Preserve transaction integrity.** Answer writes (attempt, FSRS card, mastery, stats, achievements and replay receipt) must commit atomically. They are not individually idempotent. The receipt deduplicates an entire logical answer; do not replace the transaction with sequential independently committed upserts.
 
 - **Connection limit tuning.** Set `connection_limit` on the Prisma URL once we know runtime concurrency. Too high = Postgres dies; too low = requests queue.
 

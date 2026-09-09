@@ -20,13 +20,15 @@ Notes:
 ## Percentile line
 
 Below the streak strip, only when `api.user.weeklyPercentile` returns non-null:
-`> 73% of UniMind users this week`
+`Answered at least as many questions as 73% of active UniMind users this week` (ties are included)
 
 Small, one-liner, cyan accent. Hide entirely if endpoint returns `null`.
 
 ## Post-answer flourish
 
-After the extension calls `question.answer`, the response already includes `xpDelta`, `newLevel`, `leveledUp`, `newlyEarnedCodes`, and `newlyEarned` (`[{ code, name, xpReward }]`).
+The extension must generate a UUID `attemptId` per genuine answer and reuse that ID and the exact payload on every retry. The server persists the original response with the answer transaction and replays it without awarding XP twice, even after unenrollment. Reusing an ID with changed input returns `CONFLICT`.
+
+After the extension calls `question.answer`, the response includes `xpDelta`, `newLevel`, `leveledUp`, `newlyEarnedCodes`, and `newlyEarned` (`[{ code, name, xpReward }]`). `xpDelta` includes achievement bonuses; do not add the displayed achievement rewards to it again.
 
 - Correct + non-level-up: `+10 XP` toast (amount reflects difficulty). Phosphor colour. ~2s fade.
 - Correct + level-up: `+10 XP · Level 5 ↑` with a distinct amber animation. ~3s.

@@ -19,6 +19,7 @@ Run all commands from `unimind/` unless stated otherwise.
 - `npm run db:push` — push schema without migration (dev only)
 - `npm run db:seed` — run `prisma/seed.ts`. **Destructive, dev-only**: wipes every table (including users) before loading fixtures.
 - `npm run db:seed:achievements` — idempotent upsert of the achievement catalog only; safe on any database. Run after `db:migrate` on every environment.
+- `npm run db:seed:content` — inserts missing bundled courses/topics/questions without creating fixture users, changing existing content, or resetting progress. Use to bootstrap an empty replacement database.
 - `npm run db:studio`
 - `npm test` — pure unit tests (jest). `TEST_DATABASE_URL=postgresql://… npm run test:integration` — DB-backed tests (`*.int.test.ts`) against a throwaway, migrated Postgres (local `initdb`/`pg_ctl` works; never point this at a real database).
 
@@ -35,7 +36,7 @@ Next.js 15 App Router · TypeScript · tRPC v11 · Prisma · Supabase (Auth + Po
 - `src/components/providers/supabase-provider.tsx` — `SupabaseProvider` + `useSupabase()` / `useUser()` hooks.
 - `src/middleware.ts` — protects routes using `supabase.auth.getClaims()` (fast, local JWT verify). Redirects unauth → `/login`, redirects auth users away from `/login` and `/signup`.
 - `src/server/api/trpc.ts` — `createTRPCContext` calls `supabase.auth.getUser()` (authoritative), then **lazily creates** the `public.users` profile row on first authenticated request, copying `full_name` from `auth.users.user_metadata` on create only (never overwrites).
-- No email confirmation, no OAuth, no password reset, no RLS. Data access is server-only via tRPC.
+- No OAuth or password-reset flow. Signup handles projects with email confirmation enabled or disabled. Application tables have RLS enabled with no browser-role policies and client-role grants revoked: all data access is server-only via tRPC and Prisma's database-owner connection. Supabase is used for authentication, not direct browser data access.
 
 ### Signup / onboarding flow
 1. `/signup` collects `fullName` + `email` + `password`, passes `full_name` via `options.data`.
@@ -51,6 +52,8 @@ Next.js 15 App Router · TypeScript · tRPC v11 · Prisma · Supabase (Auth + Po
 Hierarchy: `Course` → `Topic` → `Subtopic` → `Question`. Per-user state: `UserCourse` (enrollments — hard-deleted on unenroll), `UserTopic` (per-topic EMA mastery + counts), `UserQuestion` (per-`(user, question)` FSRS scheduler state, mirrors ts-fsrs `Card`), `QuestionAttempt` (append-only audit log of every answer), `UserStats` (gamification: level, xp, streaks, totals). `Assessment` is a named dated event tied to a course.
 
 Gamification tables: `Achievement` (catalog, seeded from `prisma/achievements-seed.ts`; `code` is the stable key), `UserAchievement` (first-earn rows, unique per `(user, achievement)`), `AnalyticsEvent` (best-effort wide event log; placeholder until a real pipeline exists).
+
+`QuestionAnswerReceipt` stores the original response and request fingerprint per `(userId, attemptId)`, atomically with answer effects. Clients supply a UUID per genuine answer and retain the exact payload on retries. Identical retries return the original response (Dates preserved); changed payload reuse is `CONFLICT`. Receipts deliberately survive course unenrollment so stale requests cannot recreate deleted progress.
 
 `User.id` is a UUID matching `auth.users.id` — **no default**; it must be provided on create (done by `getOrCreateUserProfile` in the tRPC context). Most other IDs are cuid.
 
@@ -71,17 +74,13 @@ Distinctive engineering-console theme — dark background, phosphor green / cyan
 
 ## Database connection (important)
 
-`DATABASE_URL` currently points at Supabase's **session pooler** on port `5432` (hostname `aws-*.pooler.supabase.com`). `DIRECT_URL` is the same. This is deliberate:
+Retain the Supabase **session pooler** on port `5432` for the replacement project. The old project was deleted; on September 9, 2026, replacement credentials were provisioned locally and in Vercel, all migrations and bootstrap seeds were applied, and live owner access plus browser-role denial were verified.
 
-- `question.answer` uses Prisma's interactive `$transaction(async tx => …)`, which **breaks on the transaction pooler** (port 6543) — pgbouncer in transaction mode can't hold a dedicated connection across multiple round-trips. Symptom: `"Transaction API error: Unable to start a transaction in the given time."`
-- Session mode holds one Postgres backend per client session, so interactive transactions work.
-- Before scaling, revisit this — see `TODO.md` at repo root for options (transaction pooler + remove interactive tx, Neon HTTP driver, etc.).
-
-Do **not** switch back to port `6543` without first refactoring `question.answer` and any other interactive transactions (including its `pg_advisory_xact_lock`, which also relies on a dedicated backend for the transaction).
+`question.answer` and `course.unenroll` require one atomic interactive transaction and a transaction-scoped advisory lock. Never split those operations into independently committed writes. Transaction pooling can pin a backend for an entire transaction; the earlier claim that it inherently cannot support interactive transactions was incorrect. However, a move to port `6543` needs explicit Prisma/prepared-statement configuration and live concurrency/rollback testing, not an untested URL edit. Keep the current pooler choice for this release and revisit connection limits before scaling.
 
 ## Deployment
 
-Vercel project `unimind-revamped`, root directory `unimind/`. `postinstall` runs `prisma generate`. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `DIRECT_URL`. Release order: `npm run db:migrate` (`prisma migrate deploy`) → `npm run db:seed:achievements` → deploy code. Never run `npm run db:seed` against a database with real users. `next build` fails on ESLint errors, so run `npm run lint` first.
+Vercel project `unimind-revamped`, production host `unimind-revamped.vercel.app`, Node.js 22. Deploy from `unimind/`; the linked Vercel project's Root Directory is `.`. `postinstall` runs `prisma generate`. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `DIRECT_URL`. Release order: `npm run db:migrate` (`prisma migrate deploy`) → `npm run db:seed:achievements` → deploy code. Never run `npm run db:seed` against a database with real users. `next build` fails on ESLint errors, so run `npm run lint` first.
 
 ## Workflow conventions
 
