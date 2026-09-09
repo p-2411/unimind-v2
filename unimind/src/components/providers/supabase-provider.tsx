@@ -32,9 +32,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setUser(session?.user ?? null);
-        router.refresh();
+        if (event !== "INITIAL_SESSION") router.refresh();
       },
     );
 
